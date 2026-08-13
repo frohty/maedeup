@@ -1,0 +1,951 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#2A2340">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<title>매듭기록장</title>
+<style>
+  :root{
+    --bg:#EDEAF2; --surface:#fff; --ink:#2A2340; --sub:#6E668A; --line:#DED8E8;
+    --teal:#1F6F6B; --mint:#4E9C8E; --rose:#A8446A; --gold:#C9922B; --violet:#6C5B8C;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  body{
+    margin:0;background:var(--bg);color:var(--ink);
+    font-family:'Apple SD Gothic Neo','Noto Sans KR','Malgun Gothic',system-ui,sans-serif;
+    font-variant-numeric:tabular-nums;
+  }
+  .wrap{max-width:460px;margin:0 auto;padding:20px 16px 40px}
+  .eyebrow{font-size:11px;letter-spacing:.2em;color:var(--sub);font-weight:700}
+  h1{font-size:26px;font-weight:800;letter-spacing:-.03em;margin:2px 0 16px}
+  .back{background:none;border:0;color:var(--violet);font-size:14px;font-weight:700;padding:0 0 10px;font-family:inherit}
+  .card{background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:16px;margin-bottom:12px}
+  .cap{font-size:11px;letter-spacing:.14em;color:var(--sub);font-weight:700}
+  .head{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+  .link{background:none;border:0;color:var(--violet);font-size:12px;font-weight:700;padding:0;font-family:inherit}
+  input,select,button{font-family:inherit}
+  input[type=text]{
+    width:100%;border:1px solid var(--line);background:#FBFAFD;border-radius:12px;
+    padding:10px 12px;font-size:16px;font-weight:600;color:var(--ink);outline:none
+  }
+  input.num{text-align:right}
+  input.memo{font-size:14px;font-weight:500;padding:8px 12px}
+  select{
+    border:1px solid var(--line);background:#FBFAFD;border-radius:12px;padding:10px 8px;
+    font-size:15px;font-weight:600;color:var(--ink);max-width:100%
+  }
+  select.wide{flex:1;width:100%}
+  .row{display:flex;align-items:center;gap:8px}
+  .lab{font-size:12px;color:var(--sub);width:28px;flex:0 0 auto}
+  .unitwrap{position:relative;flex:1}
+  .unitwrap .suf{position:absolute;right:10px;top:50%;transform:translateY(-50%);font-size:12px;color:var(--sub);pointer-events:none}
+  .unitwrap input{padding-right:32px}
+  .mat,.libitem{padding-bottom:12px;margin-bottom:12px;border-bottom:1px dashed var(--line)}
+  .mat:last-child,.libitem:last-child{border-bottom:0;margin-bottom:0;padding-bottom:0}
+  .x{background:none;border:0;color:var(--sub);font-size:18px;padding:0 2px}
+  .sum{min-width:70px;text-align:right;font-weight:700;color:var(--sub)}
+  .sum.on{color:var(--teal)}
+  .each{font-size:11.5px;color:var(--sub)}
+  .buyinfo{font-size:12.5px;color:var(--sub)}
+  .total{display:flex;justify-content:space-between;font-size:14px;font-weight:800;padding-top:12px}
+  /* 홈 */
+  .tile{
+    width:100%;display:flex;align-items:center;gap:12px;text-align:left;
+    background:var(--surface);border:1px solid var(--line);border-radius:18px;
+    padding:16px;margin-bottom:12px;color:inherit
+  }
+  .tile .t{font-size:16px;font-weight:800}
+  .tile .s{font-size:12px;color:var(--sub);margin-top:2px}
+  .tile .arrow{margin-left:auto;color:var(--sub);font-size:20px}
+  .spool{width:42px;height:42px;flex:0 0 auto;border-radius:14px;background:#F3F0F8;display:flex;align-items:center;justify-content:center}
+  .newbtn{
+    width:100%;border:1px dashed var(--violet);background:#FBFAFD;color:var(--violet);
+    border-radius:14px;padding:14px;font-size:14px;font-weight:800;margin-top:4px
+  }
+  /* 결과 */
+  .result{background:var(--ink);color:#fff;border-radius:18px;padding:16px;margin-bottom:12px}
+  .result .cap{color:rgba(255,255,255,.7)}
+  .big{font-size:42px;font-weight:800;letter-spacing:-.04em}
+  .band{display:flex;height:16px;border-radius:8px;overflow:hidden;background:rgba(255,255,255,.12);margin:12px 0}
+  .band i{background-image:repeating-linear-gradient(115deg,rgba(255,255,255,.22) 0 2px,rgba(255,255,255,0) 2px 6px)}
+  .legend{display:grid;grid-template-columns:1fr 1fr;gap:6px 12px;font-size:12px}
+  .legend div{display:flex;align-items:center;gap:6px}
+  .dot{width:8px;height:8px;border-radius:3px;flex:0 0 auto}
+  .legend b{margin-left:auto;font-weight:700}
+  .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:14px;padding-top:12px;border-top:1px solid rgba(255,255,255,.15)}
+  .stats small{display:block;font-size:10.5px;opacity:.6;font-weight:600}
+  .stats span{font-size:15px;font-weight:700}
+  .warn{font-size:12px;color:#FFB4C6;margin-top:10px}
+  /* 사진 */
+  .shots{display:flex;gap:8px;overflow-x:auto;padding:12px 0 4px}
+  .shot{position:relative;width:82px;height:82px;flex:0 0 auto;border-radius:16px;overflow:hidden;border:1px solid var(--line)}
+  .shot.first{border-color:var(--violet)}
+  .shot img{width:100%;height:100%;object-fit:cover;display:block}
+  .tag{position:absolute;left:5px;bottom:5px;font-size:10px;font-weight:700;padding:2px 6px;border-radius:99px;border:0;color:#fff;background:rgba(42,35,64,.72)}
+  .tag.rep{background:var(--violet)}
+  .del{position:absolute;right:4px;top:4px;width:22px;height:22px;border-radius:99px;border:0;background:rgba(42,35,64,.72);color:#fff;font-size:14px;line-height:1}
+  .add{width:82px;height:82px;flex:0 0 auto;border-radius:16px;border:1px dashed var(--violet);background:#FBFAFD;color:var(--violet);font-size:11px;font-weight:700;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px}
+  .pick{display:flex;gap:8px;margin-top:8px}
+  .pick label{position:relative;flex:1;display:flex;align-items:center;justify-content:center;gap:6px;border:1px solid var(--violet);background:#FBFAFD;color:var(--violet);border-radius:12px;padding:12px 8px;font-size:13.5px;font-weight:700}
+  .pick input{position:absolute;inset:0;width:100%;height:100%;opacity:0}
+  .hint{font-size:11.5px;color:var(--sub);margin-top:8px;line-height:1.5}
+  /* 설정 */
+  .grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+  .pct{border:1px solid var(--line);background:transparent;color:var(--sub);border-radius:12px;padding:12px 0;font-size:15px;font-weight:800}
+  .pct.on{background:var(--violet);border-color:var(--violet);color:#fff}
+  .chip{border:1px solid var(--line);background:transparent;color:var(--sub);border-radius:99px;padding:7px 14px;font-size:13px;font-weight:700}
+  .chip.on{background:var(--violet);border-color:var(--violet);color:#fff}
+  .toggle{border:1px solid var(--line);background:transparent;color:var(--sub);border-radius:12px;padding:10px 12px;font-size:13px;font-weight:700}
+  .toggle.on{border-color:var(--violet);color:var(--violet)}
+  .danger{width:100%;border:1px solid var(--line);background:transparent;color:var(--rose);border-radius:14px;padding:12px;font-size:13px;font-weight:700}
+  /* 작품 목록 */
+  .work{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px dashed var(--line)}
+  .work:last-child{border-bottom:0}
+  .thumb{position:relative;width:52px;height:52px;flex:0 0 auto;border-radius:14px;overflow:hidden;background:#F3F0F8;border:1px solid var(--line);display:flex;align-items:center;justify-content:center}
+  .thumb img{width:100%;height:100%;object-fit:cover}
+  .thumb b{position:absolute;right:2px;bottom:2px;background:rgba(42,35,64,.72);color:#fff;font-size:9.5px;padding:1px 5px;border-radius:99px}
+  .work .name{font-size:14.5px;font-weight:700}
+  .work .meta{font-size:11.5px;color:var(--sub)}
+  .work .open{flex:1;text-align:left;background:none;border:0;display:flex;align-items:center;gap:10px;padding:0;color:inherit}
+  .toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:var(--ink);color:#fff;font-size:13px;font-weight:600;padding:9px 16px;border-radius:99px;opacity:0;transition:opacity .2s;pointer-events:none}
+  .toast.on{opacity:1}
+  .ver{text-align:center;font-size:10.5px;color:var(--sub);margin-top:10px}
+  .modal{position:fixed;inset:0;background:rgba(20,16,32,.55);display:flex;align-items:flex-end;justify-content:center;z-index:50}
+  .sheet{background:var(--surface);width:100%;max-width:460px;border-radius:24px 24px 0 0;padding:16px 16px 24px;max-height:92vh;overflow:auto}
+  .grab{width:92px;height:6px;border-radius:6px;background:var(--line);margin:2px auto 14px}
+  .tabs{display:flex;gap:8px;margin-bottom:14px}
+  .tab{flex:1;border:1px solid var(--line);background:transparent;color:var(--sub);border-radius:14px;padding:12px;font-size:14px;font-weight:700}
+  .tab.on{background:var(--violet);border-color:var(--violet);color:#fff}
+  #cardPrev{width:100%;border-radius:16px;display:block;border:1px solid var(--line)}
+  #textPrev{white-space:pre-wrap;font-size:14px;line-height:1.7;background:#FBFAFD;border:1px solid var(--line);border-radius:14px;padding:14px}
+  .primary{width:100%;background:var(--ink);color:#fff;border:0;border-radius:16px;padding:15px;font-size:15px;font-weight:800;margin-top:14px}
+  .ghost{width:100%;background:transparent;color:var(--sub);border:1px solid var(--line);border-radius:16px;padding:13px;font-size:14px;font-weight:700;margin-top:8px;display:block;text-align:center;position:relative}
+  .check{display:flex;align-items:center;gap:8px;margin-top:12px;font-size:13px;color:var(--sub)}
+  .check input{width:20px;height:20px}
+  svg{display:block}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<!-- ═══ 홈 ═══ -->
+<section id="viewHome">
+  <div class="eyebrow">마이크로 마크라메</div>
+  <h1>매듭기록장</h1>
+
+  <div class="head" style="margin-bottom:10px">
+    <span class="cap">메뉴</span>
+    <button class="link" id="btnEditMenu">이름·순서 편집</button>
+  </div>
+  <div id="menu"></div>
+
+  <div class="head" style="margin:20px 0 8px"><span class="cap">자료 보관</span></div>
+  <button class="ghost" id="btnExport">백업 파일로 내보내기</button>
+  <label class="ghost">백업 파일 가져오기
+    <input type="file" accept=".json,application/json" id="fileImport" style="position:absolute;inset:0;width:100%;height:100%;opacity:0">
+  </label>
+  <div class="hint">폰을 바꾸거나 다른 사람에게 재료 목록을 넘길 때 쓰세요.</div>
+
+  <div class="ver">매듭기록장 · v14</div>
+</section>
+
+<!-- ═══ 작품 목록 ═══ -->
+<section id="viewWorks" hidden>
+  <button class="back" id="backHome0">‹ 처음으로</button>
+  <h1 id="worksTitle">원가계산표</h1>
+  <div class="card">
+    <div class="head"><span class="cap">작품</span><span class="cap" id="workCount"></span></div>
+    <div id="works"></div>
+    <button class="newbtn" id="btnNew">+ 새 작품 만들기</button>
+  </div>
+</section>
+
+<!-- ═══ 작품 상세 ═══ -->
+<section id="viewWork" hidden>
+  <button class="back" id="backWorks">‹ 작품 기록</button>
+
+  <div class="result">
+    <div class="cap">판매가</div>
+    <div><span class="big" id="price">0</span><span style="font-size:18px;font-weight:600;opacity:.7"> 원</span></div>
+    <div class="band" id="band"></div>
+    <div class="legend" id="legend"></div>
+    <div class="stats">
+      <div><small>총원가</small><span id="stCost">0원</span></div>
+      <div><small>정산 입금액</small><span id="stNet">0원</span></div>
+      <div><small>이익률</small><span id="stMargin">0%</span></div>
+    </div>
+    <div class="warn" id="warn" hidden>수수료를 빼면 남는 게 없어요. 마진율을 낮추거나 수수료 반영을 켜세요.</div>
+  </div>
+
+  <div class="card">
+    <div class="head"><span class="cap">작품</span><button class="link" id="btnShare">공유</button></div>
+    <input type="text" id="title" placeholder="예: 물결 팔찌 7칸">
+    <div class="shots" id="shots"></div>
+    <div class="pick" id="pick" hidden>
+      <label>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><rect x="2.5" y="5.5" width="19" height="14" rx="3" stroke="#6C5B8C" stroke-width="1.6"/><circle cx="12" cy="12.5" r="3.6" stroke="#6C5B8C" stroke-width="1.6"/><path d="M8.5 5.5 9.8 3.4h4.4l1.3 2.1" stroke="#6C5B8C" stroke-width="1.6" stroke-linejoin="round"/></svg>
+        직접 촬영
+        <input type="file" accept="image/*" capture="environment" id="fileCam">
+      </label>
+      <label>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><rect x="3" y="4.5" width="18" height="15" rx="3" stroke="#6C5B8C" stroke-width="1.6"/><path d="M4 16.5 9.5 11l4 4 2.5-2.5 4 4" stroke="#6C5B8C" stroke-width="1.6" stroke-linejoin="round"/><circle cx="9" cy="9" r="1.4" fill="#6C5B8C"/></svg>
+        앨범에서 선택
+        <input type="file" accept="image/*" multiple id="fileLib">
+      </label>
+    </div>
+    <div class="hint" id="photoHint"></div>
+  </div>
+
+  <div class="card">
+    <div class="head"><span class="cap">재료비</span><button class="link" id="btnMat">+ 재료 추가</button></div>
+    <div id="mats"></div>
+    <div class="total"><span>재료비 합계</span><span style="color:var(--teal)" id="matTotal">0원</span></div>
+    <div class="hint">쓰는 재료가 목록에 없으면 <b id="goLib2" style="color:var(--violet)">재료 목록</b>에서 먼저 등록하세요.</div>
+  </div>
+
+  <div class="card">
+    <div class="head"><span class="cap">인건비</span><button class="link" id="btnLaborAdd">+ 작업 추가</button></div>
+    <div id="labors"></div>
+    <div class="total">
+      <button class="chip" id="btnLabor" style="padding:5px 12px;font-size:12px">포함 중</button>
+      <span style="color:var(--rose)" id="laborSum">0원</span>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="head"><span class="cap">기타비용</span><button class="link" id="btnEtc">+ 항목 추가</button></div>
+    <div id="etcs"></div>
+  </div>
+
+  <div class="card">
+    <div class="head"><span class="cap">판매 설정</span><span style="font-size:20px;font-weight:800;color:var(--violet)" id="marginNow">40%</span></div>
+    <div style="font-size:12px;color:var(--sub);margin-bottom:8px">남기고 싶은 마진율</div>
+    <div class="grid3" id="margins"></div>
+
+    <div style="font-size:12px;color:var(--sub);margin:16px 0 8px">판매처·결제 수수료</div>
+    <div class="row">
+      <div class="unitwrap" style="max-width:110px"><input class="num" type="text" inputmode="decimal" id="fee" placeholder="0"><span class="suf">%</span></div>
+      <button class="toggle on" id="btnFee">판매가에 반영함</button>
+    </div>
+    <div class="hint">반영하면 수수료를 떼고도 마진율이 그대로 남도록 판매가를 올려 잡습니다.</div>
+
+    <div style="font-size:12px;color:var(--sub);margin:16px 0 8px">끝자리 올림</div>
+    <div class="row" id="rounds"></div>
+  </div>
+
+  <button class="danger" id="delWork">이 작품 삭제</button>
+</section>
+
+<!-- ═══ 재료 목록 ═══ -->
+<section id="viewLib" hidden>
+  <button class="back" id="backHome2">‹ 처음으로</button>
+  <h1 id="libTitle">재료 목록</h1>
+  <div class="card">
+    <div class="head"><span class="cap">등록한 재료</span><button class="link" id="btnLibAdd">+ 재료 등록</button></div>
+    <div id="libs"></div>
+    <div class="hint">구매할 때마다 여기에 넣어두세요. 작품에서 이름만 고르면 단가가 자동으로 들어옵니다. 값이 오르면 여기 금액만 고치면 돼요.</div>
+  </div>
+</section>
+
+
+<div class="modal" id="shareModal" hidden>
+  <div class="sheet">
+    <div class="grab"></div>
+    <div class="head"><span class="cap">공유 미리보기</span></div>
+    <div class="tabs">
+      <button class="tab on" id="tabCard">이미지 카드</button>
+      <button class="tab" id="tabText">글</button>
+    </div>
+    <img id="cardPrev" alt="공유 카드 미리보기">
+    <div id="textPrev" hidden></div>
+    <label class="check"><input type="checkbox" id="incCost"> 원가·이익도 함께 넣기</label>
+    <button class="primary" id="doShare">공유하기</button>
+    <button class="ghost" id="closeShare">닫기</button>
+  </div>
+</div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+const MAX_PHOTOS = 5;
+const KEY = 'maedeup-record';
+const UNITS = ['m','개','cm','g','장'];
+const $ = id => document.getElementById(id);
+const uid = () => Math.random().toString(36).slice(2,9);
+const n = v => { const x = parseFloat(String(v).replace(/,/g,'')); return isFinite(x) ? x : 0; };
+const won = v => Math.round(v).toLocaleString('ko-KR');
+const perUnit = v => v >= 100 ? won(v) : (Math.round(v*10)/10).toLocaleString('ko-KR');
+const esc = s => String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;');
+
+let lib = [
+  {id:uid(), name:'0.8 플랫왁스실', unit:'m', cost:'8500', qty:'250'},
+  {id:uid(), name:'금볼', unit:'개', cost:'6000', qty:'20'}
+];
+let works = [];
+let curId = null;
+/* 첫 화면 메뉴: 이름과 순서를 직접 바꿀 수 있습니다 */
+let menu = [{key:'lib', label:'재료 목록'}, {key:'works', label:'원가계산표'}];
+let homeEdit = false;
+const ICON = {
+  lib:'<svg width="22" height="22" viewBox="0 0 24 24" fill="none"><rect x="6" y="3.5" width="12" height="17" rx="2" stroke="#6C5B8C" stroke-width="1.6"/><path d="M6 8h12M6 16h12" stroke="#6C5B8C" stroke-width="1.6"/></svg>',
+  works:'<svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M4 9c4-4 12-4 16 0M4 15c4 4 12 4 16 0" stroke="#6C5B8C" stroke-width="1.6" stroke-linecap="round"/><circle cx="12" cy="12" r="2.4" stroke="#6C5B8C" stroke-width="1.6"/></svg>'
+};
+const labelOf = k => { const m = menu.find(x=>x.key===k); return m ? m.label : ''; };
+
+const blank = () => ({
+  title:'', photos:[],
+  materials:[{id:uid(), libId:lib[0]?lib[0].id:'', memo:'', name:'', unit:'m', buyCost:'', buyQty:'', used:''}],
+  useLabor:true, labors:[{id:uid(), name:'매듭 작업', minutes:'', wage:''}],
+  etc:[{id:uid(),name:'포장재',amount:''}],
+  margin:'40', fee:'', feeInPrice:true, roundUnit:'100'
+});
+const cur = () => works.find(w=>w.id===curId);
+let S = blank();
+
+const libOf = id => lib.find(l=>l.id===id);
+function resolved(m){
+  const l = libOf(m.libId);
+  return l ? {name:l.name, unit:l.unit, cost:n(l.cost), qty:n(l.qty)}
+           : {name:m.name, unit:m.unit, cost:n(m.buyCost), qty:n(m.buyQty)};
+}
+
+/* ── 저장 ── */
+async function save(){
+  const payload = JSON.stringify({works, lib, menu});
+  try { localStorage.setItem(KEY, payload); return; } catch(e){}
+  try { await window.storage.set(KEY, payload); } catch(e){}
+}
+async function load(){
+  try { const t = localStorage.getItem(KEY); if(t) return JSON.parse(t); } catch(e){}
+  try { const r = await window.storage.get(KEY); if(r) return JSON.parse(r.value); } catch(e){}
+  return null;
+}
+let saveTimer;
+const queueSave = () => { clearTimeout(saveTimer); saveTimer = setTimeout(save, 400); };
+
+let toastTimer;
+function flash(msg){
+  const t = $('toast'); t.textContent = msg; t.classList.add('on');
+  clearTimeout(toastTimer); toastTimer = setTimeout(()=>t.classList.remove('on'), 1900);
+}
+
+/* ── 화면 이동 ── */
+function show(view){
+  $('viewHome').hidden  = view !== 'home';
+  $('viewWorks').hidden = view !== 'works';
+  $('viewWork').hidden  = view !== 'work';
+  $('viewLib').hidden   = view !== 'lib';
+  window.scrollTo(0,0);
+}
+function openHome(){ curId = null; renderHome(); show('home'); }
+function openWorks(){ curId = null; renderWorks(); renderHome(); show('works'); }
+function openWork(id){
+  curId = id; S = cur().data;
+  $('title').value = S.title || '';
+  $('fee').value = S.fee || '';
+  $('pick').hidden = true;
+  renderPhotos(); renderMats(); renderLabors(); renderEtc(); renderSettings(); calc();
+  show('work');
+}
+function openLib(){ renderLib(); show('lib'); }
+$('goLib2').addEventListener('click', openLib);
+$('backHome0').addEventListener('click', openHome);
+$('backWorks').addEventListener('click', openWorks);
+$('backHome2').addEventListener('click', openHome);
+
+/* ── 홈 ── */
+function renderHome(){
+  $('menu').innerHTML = menu.map((m,i)=>{
+    const sub = m.key==='lib' ? '등록된 재료 '+lib.length+'개' : '기록한 작품 '+works.length+'개';
+    if(homeEdit){
+      return '<div class="tile" data-i="'+i+'">' +
+        '<span class="spool">'+ICON[m.key]+'</span>' +
+        '<input type="text" data-f="label" value="'+esc(m.label)+'">' +
+        '<button class="x" data-up style="font-size:20px'+(i===0?';opacity:.25':'')+'">\u2191</button>' +
+        '<button class="x" data-down style="font-size:20px'+(i===menu.length-1?';opacity:.25':'')+'">\u2193</button>' +
+      '</div>';
+    }
+    return '<button class="tile" data-key="'+m.key+'">' +
+      '<span class="spool">'+ICON[m.key]+'</span>' +
+      '<span><span class="t">'+esc(m.label)+'</span><span class="s">'+sub+'</span></span>' +
+      '<span class="arrow">\u203a</span></button>';
+  }).join('');
+  $('btnEditMenu').textContent = homeEdit ? '완료' : '이름\u00b7순서 편집';
+  syncLabels();
+  $('workCount').textContent = works.length ? works.length + '개' : '';
+}
+function syncLabels(){
+  $('worksTitle').textContent = labelOf('works');
+  $('libTitle').textContent = labelOf('lib');
+  $('backWorks').textContent = '\u2039 ' + labelOf('works');
+}
+$('btnEditMenu').addEventListener('click', ()=>{ homeEdit = !homeEdit; renderHome(); });
+$('menu').addEventListener('click', e=>{
+  const edit = e.target.closest('[data-i]');
+  if(edit){
+    const i = +edit.dataset.i;
+    if(e.target.closest('[data-up]') && i>0){ const t=menu[i-1]; menu[i-1]=menu[i]; menu[i]=t; renderHome(); queueSave(); }
+    else if(e.target.closest('[data-down]') && i<menu.length-1){ const t=menu[i+1]; menu[i+1]=menu[i]; menu[i]=t; renderHome(); queueSave(); }
+    return;
+  }
+  const b = e.target.closest('[data-key]'); if(!b) return;
+  if(b.dataset.key==='lib') openLib(); else openWorks();
+});
+$('menu').addEventListener('input', e=>{
+  const edit = e.target.closest('[data-i]'); if(!edit) return;
+  menu[+edit.dataset.i].label = e.target.value;
+  syncLabels(); queueSave();
+});
+function renderWorks(){
+  const box = $('works');
+  if(!works.length){
+    box.innerHTML = '<div class="hint" style="margin:0 0 4px">아직 만든 작품이 없어요. 아래에서 새 작품을 시작하세요.</div>';
+    return;
+  }
+  box.innerHTML = works.map(w=>{
+    const shots = (w.data.photos)||[];
+    const t = shots[0];
+    const name = (w.data.title||'').trim() || '이름 없는 작품';
+    return '<div class="work" data-id="'+w.id+'">' +
+      '<button class="open"><span class="thumb">' +
+      (t ? '<img src="'+t+'" alt="">' : '<svg width="18" height="18" viewBox="0 0 24 24" fill="none"><rect x="2.5" y="5.5" width="19" height="14" rx="3" stroke="#6E668A" stroke-width="1.6"/><circle cx="12" cy="12.5" r="3.6" stroke="#6E668A" stroke-width="1.6"/></svg>') +
+      (shots.length>1 ? '<b>'+shots.length+'</b>' : '') +
+      '</span><span><span class="name">'+esc(name)+'</span><br>' +
+      '<span class="meta">판매가 '+won(w.price||0)+'원 · 원가 '+won(w.cost||0)+'원</span></span></button>' +
+      '<button class="x" data-x>×</button></div>';
+  }).join('');
+}
+$('works').addEventListener('click', e=>{
+  const row = e.target.closest('.work'); if(!row) return;
+  const w = works.find(x=>x.id===row.dataset.id); if(!w) return;
+  if(e.target.closest('[data-x]')){
+    works = works.filter(x=>x.id!==w.id);
+    renderWorks(); renderHome(); queueSave(); return;
+  }
+  openWork(w.id);
+});
+$('btnNew').addEventListener('click', ()=>{
+  const w = {id:uid(), data:blank(), price:0, cost:0};
+  works.unshift(w); queueSave(); openWork(w.id);
+});
+$('delWork').addEventListener('click', ()=>{
+  works = works.filter(x=>x.id!==curId);
+  queueSave(); openWorks();
+});
+
+/* ── 재료 목록 ── */
+function renderLib(){
+  const box = $('libs');
+  if(!lib.length){ box.innerHTML = '<div class="hint" style="margin:0">아직 등록한 재료가 없어요. "+ 재료 등록"을 눌러 넣어보세요.</div>'; return; }
+  box.innerHTML = lib.map(l =>
+    '<div class="libitem" data-id="'+l.id+'">' +
+      '<div class="row" style="margin-bottom:8px">' +
+        '<input type="text" data-f="name" placeholder="재료 이름" value="'+esc(l.name)+'">' +
+        '<button class="x" data-x>×</button>' +
+      '</div>' +
+      '<div class="row">' +
+        '<div class="unitwrap"><input class="num" type="text" inputmode="decimal" data-f="cost" placeholder="8500" value="'+esc(l.cost)+'"><span class="suf">원</span></div>' +
+        '<span style="color:var(--sub);font-size:13px">에</span>' +
+        '<div class="unitwrap"><input class="num" type="text" inputmode="decimal" data-f="qty" placeholder="250" value="'+esc(l.qty)+'"><span class="suf">'+esc(l.unit)+'</span></div>' +
+        '<select data-f="unit">'+UNITS.map(u=>'<option'+(u===l.unit?' selected':'')+'>'+u+'</option>').join('')+'</select>' +
+      '</div>' +
+      '<div class="each" style="margin-top:6px">'+(n(l.qty)>0 ? esc(l.unit)+'당 '+perUnit(n(l.cost)/n(l.qty))+'원' : '')+'</div>' +
+    '</div>'
+  ).join('');
+}
+function libChanged(e){
+  const el = e.target.closest('.libitem'); if(!el) return;
+  const l = libOf(el.dataset.id); const f = e.target.dataset.f;
+  if(!l||!f) return;
+  l[f] = e.target.value;
+  el.querySelector('.each').textContent = n(l.qty)>0 ? l.unit+'당 '+perUnit(n(l.cost)/n(l.qty))+'원' : '';
+  el.querySelectorAll('.suf')[1].textContent = l.unit;
+  queueSave();
+}
+$('libs').addEventListener('input', libChanged);
+$('libs').addEventListener('change', libChanged);
+$('libs').addEventListener('click', e=>{
+  if(!e.target.closest('[data-x]')) return;
+  const el = e.target.closest('.libitem');
+  const l = libOf(el.dataset.id);
+  works.forEach(w => w.data.materials.forEach(m=>{
+    if(m.libId===l.id){ m.libId=''; m.name=l.name; m.unit=l.unit; m.buyCost=l.cost; m.buyQty=l.qty; }
+  }));
+  lib = lib.filter(x=>x.id!==l.id);
+  renderLib(); queueSave();
+});
+$('btnLibAdd').addEventListener('click', ()=>{
+  lib.push({id:uid(), name:'', unit:'m', cost:'', qty:''});
+  renderLib(); queueSave();
+});
+
+/* ── 재료비 ── */
+function renderMats(){
+  const box = $('mats'); box.innerHTML = '';
+  S.materials.forEach(m=>{
+    const r = resolved(m);
+    const picked = !!libOf(m.libId);
+    const memoPh = /실/.test(r.name||'') ? '색상 (선택) 예: 라벤더' : '비고 (선택)';
+    const el = document.createElement('div');
+    el.className = 'mat'; el.dataset.id = m.id;
+    let html =
+      '<div class="row" style="margin-bottom:8px">' +
+        '<select class="wide" data-f="libId">' +
+          lib.map(l=>'<option value="'+l.id+'"'+(l.id===m.libId?' selected':'')+'>'+esc(l.name||'(이름 없음)')+'</option>').join('') +
+          '<option value=""'+(picked?'':' selected')+'>직접 입력</option>' +
+        '</select>' +
+        '<button class="x" data-x>×</button>' +
+      '</div>' +
+      '<div class="row" style="margin-bottom:8px">' +
+        '<input class="memo" type="text" data-f="memo" placeholder="'+memoPh+'" value="'+esc(m.memo)+'">' +
+      '</div>';
+    if(picked){
+      html += '<div class="row" style="margin-bottom:8px"><span class="lab">구매</span>' +
+              '<span class="buyinfo">'+won(r.cost)+'원에 '+esc(r.qty)+esc(r.unit)+'</span></div>';
+    }else{
+      html +=
+        '<div class="row" style="margin-bottom:8px">' +
+          '<input type="text" data-f="name" placeholder="재료 이름" value="'+esc(m.name)+'">' +
+          '<select data-f="unit">'+UNITS.map(u=>'<option'+(u===m.unit?' selected':'')+'>'+u+'</option>').join('')+'</select>' +
+        '</div>' +
+        '<div class="row" style="margin-bottom:8px">' +
+          '<span class="lab">구매</span>' +
+          '<div class="unitwrap"><input class="num" type="text" inputmode="decimal" data-f="buyCost" placeholder="8500" value="'+esc(m.buyCost)+'"><span class="suf">원</span></div>' +
+          '<span style="color:var(--sub);font-size:13px">에</span>' +
+          '<div class="unitwrap"><input class="num" type="text" inputmode="decimal" data-f="buyQty" placeholder="250" value="'+esc(m.buyQty)+'"><span class="suf">'+esc(m.unit)+'</span></div>' +
+        '</div>';
+    }
+    html +=
+      '<div class="row">' +
+        '<span class="lab">사용</span>' +
+        '<div class="unitwrap" style="max-width:104px"><input class="num" type="text" inputmode="decimal" data-f="used" placeholder="0" value="'+esc(m.used)+'"><span class="suf usedunit">'+esc(r.unit)+'</span></div>' +
+        '<span class="each"></span>' +
+        '<div class="sum" style="margin-left:auto">0원</div>' +
+      '</div>';
+    el.innerHTML = html;
+    box.appendChild(el);
+  });
+}
+function matChanged(e){
+  const el = e.target.closest('.mat'); if(!el) return;
+  const m = S.materials.find(x=>x.id===el.dataset.id);
+  const f = e.target.dataset.f; if(!m||!f) return;
+  m[f] = e.target.value;
+  if(f==='libId'||f==='unit'||f==='name') renderMats();
+  calc(); queueSave();
+}
+$('mats').addEventListener('input', matChanged);
+$('mats').addEventListener('change', matChanged);
+$('mats').addEventListener('click', e=>{
+  if(!e.target.closest('[data-x]')) return;
+  const el = e.target.closest('.mat');
+  S.materials = S.materials.filter(x=>x.id!==el.dataset.id);
+  renderMats(); calc(); queueSave();
+});
+$('btnMat').addEventListener('click', ()=>{
+  S.materials.push({id:uid(), libId:lib[0]?lib[0].id:'', memo:'', name:'', unit:'m', buyCost:'', buyQty:'', used:''});
+  renderMats(); calc(); queueSave();
+});
+
+/* ── 사진 ── */
+function shrink(file, max=420){
+  return new Promise((res, rej)=>{
+    const fr = new FileReader();
+    fr.onload = () => {
+      const img = new Image();
+      img.onload = () => {
+        const s = Math.min(1, max/Math.max(img.width, img.height));
+        const cv = document.createElement('canvas');
+        cv.width = Math.round(img.width*s); cv.height = Math.round(img.height*s);
+        cv.getContext('2d').drawImage(img,0,0,cv.width,cv.height);
+        res(cv.toDataURL('image/jpeg',0.7));
+      };
+      img.onerror = () => rej();
+      img.src = fr.result;
+    };
+    fr.onerror = () => rej();
+    fr.readAsDataURL(file);
+  });
+}
+async function addPhotos(files){
+  const list = Array.from(files||[]);
+  if(!list.length) return;
+  const room = MAX_PHOTOS - S.photos.length;
+  if(room <= 0){ flash('사진은 '+MAX_PHOTOS+'장까지 넣을 수 있어요'); return; }
+  try{
+    const added = await Promise.all(list.slice(0,room).map(f=>shrink(f)));
+    S.photos = S.photos.concat(added);
+    $('pick').hidden = true;
+    renderPhotos(); queueSave();
+    if(list.length > room) flash(room+'장만 추가했어요');
+  }catch(e){ flash('사진을 불러오지 못했습니다'); }
+}
+function renderPhotos(){
+  const box = $('shots'); box.innerHTML = '';
+  S.photos.forEach((p,i)=>{
+    const d = document.createElement('div');
+    d.className = 'shot' + (i===0?' first':'');
+    d.innerHTML = '<img src="'+p+'" alt="">' +
+      (i===0 ? '<span class="tag rep">대표</span>' : '<button class="tag" data-rep="'+i+'">대표로</button>') +
+      '<button class="del" data-del="'+i+'">×</button>';
+    box.appendChild(d);
+  });
+  if(S.photos.length < MAX_PHOTOS){
+    const b = document.createElement('button');
+    b.className = 'add'; b.id = 'btnAddPhoto';
+    b.innerHTML = '<svg width="22" height="22" viewBox="0 0 24 24" fill="none"><rect x="2.5" y="5.5" width="19" height="14" rx="3" stroke="#6C5B8C" stroke-width="1.6"/><circle cx="12" cy="12.5" r="3.6" stroke="#6C5B8C" stroke-width="1.6"/><path d="M8.5 5.5 9.8 3.4h4.4l1.3 2.1" stroke="#6C5B8C" stroke-width="1.6" stroke-linejoin="round"/></svg><span>'+(S.photos.length?'사진 더':'사진')+'</span>';
+    box.appendChild(b);
+  }
+  $('photoHint').textContent = S.photos.length > 1
+    ? "맨 앞 사진이 작품 목록 썸네일이 됩니다. 다른 사진은 '대표로'를 누르세요."
+    : '사진 칸을 누르면 촬영할지 앨범에서 고를지 고를 수 있어요 · 최대 '+MAX_PHOTOS+'장';
+}
+$('shots').addEventListener('click', e=>{
+  const rep = e.target.closest('[data-rep]'), del = e.target.closest('[data-del]'), add = e.target.closest('#btnAddPhoto');
+  if(rep){ const i=+rep.dataset.rep; S.photos=[S.photos[i]].concat(S.photos.filter((_,k)=>k!==i)); renderPhotos(); queueSave(); }
+  else if(del){ S.photos.splice(+del.dataset.del,1); renderPhotos(); queueSave(); }
+  else if(add){ $('pick').hidden = !$('pick').hidden; }
+});
+$('fileCam').addEventListener('change', e=>{ addPhotos(e.target.files); e.target.value=''; });
+$('fileLib').addEventListener('change', e=>{ addPhotos(e.target.files); e.target.value=''; });
+
+/* ── 인건비: 작업별로 여러 줄 ── */
+function renderLabors(){
+  const box = $('labors'); box.innerHTML = '';
+  S.labors.forEach(l=>{
+    const el = document.createElement('div');
+    el.className = 'mat'; el.dataset.id = l.id;
+    el.innerHTML =
+      '<div class="row" style="margin-bottom:8px">' +
+        '<input type="text" data-f="name" placeholder="예: 매듭 작업, 마감·포장" value="'+esc(l.name)+'">' +
+        '<button class="x" data-x>\u00d7</button>' +
+      '</div>' +
+      '<div class="row">' +
+        '<div class="unitwrap"><input class="num" type="text" inputmode="decimal" data-f="minutes" placeholder="작업시간" value="'+esc(l.minutes)+'"><span class="suf">분</span></div>' +
+        '<span style="color:var(--sub);font-size:13px">\u00d7</span>' +
+        '<div class="unitwrap"><input class="num" type="text" inputmode="decimal" data-f="wage" placeholder="시급" value="'+esc(l.wage)+'"><span class="suf">원</span></div>' +
+        '<div class="sum">0원</div>' +
+      '</div>';
+    box.appendChild(el);
+  });
+  box.style.opacity = S.useLabor ? 1 : .4;
+}
+$('labors').addEventListener('input', e=>{
+  const el = e.target.closest('.mat'); if(!el) return;
+  const l = S.labors.find(v=>v.id===el.dataset.id); const f = e.target.dataset.f;
+  if(l&&f){ l[f] = e.target.value; calc(); queueSave(); }
+});
+$('labors').addEventListener('click', e=>{
+  if(!e.target.closest('[data-x]')) return;
+  const el = e.target.closest('.mat');
+  S.labors = S.labors.filter(v=>v.id!==el.dataset.id);
+  renderLabors(); calc(); queueSave();
+});
+$('btnLaborAdd').addEventListener('click', ()=>{
+  const wage = S.labors.length ? S.labors[S.labors.length-1].wage : '';
+  S.labors.push({id:uid(), name:'', minutes:'', wage:wage});
+  renderLabors(); calc(); queueSave();
+});
+
+/* ── 기타비용 ── */
+function renderEtc(){
+  const box = $('etcs'); box.innerHTML = '';
+  S.etc.forEach(x=>{
+    const el = document.createElement('div');
+    el.className = 'row'; el.style.marginBottom='8px'; el.dataset.id = x.id;
+    el.innerHTML =
+      '<input type="text" data-f="name" placeholder="예: 택배비, 부자재" value="'+esc(x.name)+'">' +
+      '<div class="unitwrap" style="max-width:110px"><input class="num" type="text" inputmode="decimal" data-f="amount" placeholder="금액" value="'+esc(x.amount)+'"><span class="suf">원</span></div>' +
+      '<button class="x" data-x>×</button>';
+    box.appendChild(el);
+  });
+}
+$('etcs').addEventListener('input', e=>{
+  const el = e.target.closest('.row'); if(!el) return;
+  const x = S.etc.find(v=>v.id===el.dataset.id); const f = e.target.dataset.f;
+  if(x&&f){ x[f]=e.target.value; calc(); queueSave(); }
+});
+$('etcs').addEventListener('click', e=>{
+  if(!e.target.closest('[data-x]')) return;
+  const el = e.target.closest('.row');
+  S.etc = S.etc.filter(v=>v.id!==el.dataset.id);
+  renderEtc(); calc(); queueSave();
+});
+$('btnEtc').addEventListener('click', ()=>{
+  S.etc.push({id:uid(),name:'',amount:''}); renderEtc(); calc(); queueSave();
+});
+
+/* ── 판매 설정 ── */
+function renderSettings(){
+  $('margins').innerHTML = ['10','20','30','40','50','60']
+    .map(v=>'<button class="pct'+(v===String(n(S.margin))?' on':'')+'" data-m="'+v+'">'+v+'%</button>').join('');
+  $('rounds').innerHTML = [['0','그대로'],['100','100원'],['1000','1,000원']]
+    .map(([v,l])=>'<button class="chip'+(v===S.roundUnit?' on':'')+'" data-r="'+v+'">'+l+'</button>').join('');
+  $('marginNow').textContent = n(S.margin)+'%';
+  $('btnFee').classList.toggle('on', S.feeInPrice);
+  $('btnFee').textContent = S.feeInPrice ? '판매가에 반영함' : '반영 안 함';
+  $('btnLabor').textContent = S.useLabor ? '포함 중' : '제외 중';
+  $('btnLabor').classList.toggle('on', S.useLabor);
+  $('labors').style.opacity = S.useLabor ? 1 : .4;
+}
+$('margins').addEventListener('click', e=>{
+  const b = e.target.closest('[data-m]'); if(!b) return;
+  S.margin = b.dataset.m; renderSettings(); calc(); queueSave();
+});
+$('rounds').addEventListener('click', e=>{
+  const b = e.target.closest('[data-r]'); if(!b) return;
+  S.roundUnit = b.dataset.r; renderSettings(); calc(); queueSave();
+});
+$('btnFee').addEventListener('click', ()=>{ S.feeInPrice=!S.feeInPrice; renderSettings(); calc(); queueSave(); });
+$('btnLabor').addEventListener('click', ()=>{ S.useLabor=!S.useLabor; renderSettings(); calc(); queueSave(); });
+['title','fee'].forEach(id=>{
+  $(id).addEventListener('input', e=>{ S[id]=e.target.value; calc(); queueSave(); });
+});
+
+/* ── 계산 ── */
+function calc(){
+  if(!cur()) return;
+  let material = 0;
+  S.materials.forEach(m=>{
+    const r = resolved(m);
+    const up = r.qty > 0 ? r.cost/r.qty : 0;
+    const sum = up * n(m.used);
+    material += sum;
+    const el = $('mats').querySelector('[data-id="'+m.id+'"]');
+    if(el){
+      const s = el.querySelector('.sum');
+      s.textContent = won(sum)+'원'; s.classList.toggle('on', sum>0);
+      el.querySelector('.row:last-child .each').textContent = up>0 ? r.unit+'당 '+perUnit(up)+'원' : '';
+      el.querySelector('.usedunit').textContent = r.unit;
+    }
+  });
+  let labor = 0;
+  S.labors.forEach(l=>{
+    const sum = S.useLabor ? (n(l.minutes)/60)*n(l.wage) : 0;
+    labor += sum;
+    const el = $('labors').querySelector('[data-id="'+l.id+'"]');
+    if(el){ const s = el.querySelector('.sum'); s.textContent = won(sum)+'원'; s.classList.toggle('on', sum>0); }
+  });
+  const etcSum = S.etc.reduce((a,b)=>a+n(b.amount),0);
+  const cost = material + labor + etcSum;
+
+  const mr = Math.min(Math.max(n(S.margin),0),90)/100;
+  const fr = Math.min(n(S.fee),90)/100;
+  const denom = S.feeInPrice ? 1-mr-fr : 1-mr;
+  const raw = denom > .05 ? cost/denom : cost/.05;
+  const unit = n(S.roundUnit);
+  const price = cost <= 0 ? 0 : (unit>0 ? Math.ceil(raw/unit)*unit : Math.round(raw));
+  const feeAmt = price*fr, net = price-feeAmt, profit = net-cost;
+
+  cur().price = price; cur().cost = Math.round(cost);
+
+  $('matTotal').textContent = won(material)+'원';
+  $('laborSum').textContent = won(labor)+'원';
+  $('price').textContent = won(price);
+  $('stCost').textContent = won(cost)+'원';
+  $('stNet').textContent = won(net)+'원';
+  $('stMargin').textContent = (price>0 ? Math.round(profit/price*100) : 0)+'%';
+  $('warn').hidden = !(cost>0 && profit<=0);
+
+  const bands = [
+    ['재료비', material, 'var(--teal)'],
+    ['인건비', labor, 'var(--rose)'],
+    ['기타비용', etcSum, 'var(--gold)'],
+    ['판매 수수료', feeAmt, 'var(--violet)'],
+    ['남는 이익', Math.max(profit,0), 'var(--mint)']
+  ].filter(b=>b[1]>0);
+  $('band').innerHTML = bands.map(b=>'<i style="width:'+(price>0?b[1]/price*100:0)+'%;background:'+b[2]+'"></i>').join('');
+  $('legend').innerHTML = bands.map(b=>'<div><span class="dot" style="background:'+b[2]+'"></span>'+b[0]+'<b>'+won(b[1])+'</b></div>').join('');
+}
+
+/* ── 공유: 미리보기 후 내보내기 ── */
+let shareTab = 'card';
+let shareCanvas = null;
+const FONT = "'Apple SD Gothic Neo','Noto Sans KR','Malgun Gothic',system-ui,sans-serif";
+
+function usedList(){
+  return S.materials.map(m=>{
+    const r = resolved(m);
+    if(!r.name || !n(m.used)) return null;
+    return r.name + (m.memo ? ' ('+m.memo+')' : '') + ' ' + m.used + r.unit;
+  }).filter(Boolean);
+}
+function figures(){
+  const w = cur();
+  const feeAmt = (w.price||0) * Math.min(n(S.fee),90)/100;
+  return {name:(S.title||'').trim()||'이름 없는 작품', price:w.price||0, cost:w.cost||0,
+          profit:(w.price||0)-feeAmt-(w.cost||0)};
+}
+function buildText(inc){
+  const f = figures();
+  let t = f.name + '\n판매가 ' + won(f.price) + '원';
+  const list = usedList();
+  if(list.length) t += '\n\n' + list.map(x=>'· '+x).join('\n');
+  if(inc) t += '\n\n원가 ' + won(f.cost) + '원 · 남는 이익 ' + won(f.profit) + '원';
+  return t + '\n\n— 매듭기록장';
+}
+function roundRect(g,x,y,w,h,r){
+  g.beginPath(); g.moveTo(x+r,y);
+  g.arcTo(x+w,y,x+w,y+h,r); g.arcTo(x+w,y+h,x,y+h,r);
+  g.arcTo(x,y+h,x,y,r); g.arcTo(x,y,x+w,y,r); g.closePath();
+}
+function drawCard(inc, done){
+  const SZ = 1080, c = document.createElement('canvas');
+  c.width = SZ; c.height = SZ;
+  const g = c.getContext('2d');
+  const f = figures();
+  const m = SZ*0.07, ph = SZ*0.44;
+  g.fillStyle = '#FBFAFD'; g.fillRect(0,0,SZ,SZ);
+
+  const rest = () => {
+    let y = m + ph + SZ*0.10;
+    g.textAlign = 'center';
+    g.fillStyle = '#2A2340'; g.font = '800 '+Math.round(SZ*0.058)+'px '+FONT;
+    g.fillText(f.name, SZ/2, y); y += SZ*0.052;
+    const colors = S.materials.map(x=>x.memo).filter(Boolean).join(' · ');
+    if(colors){ g.fillStyle='#6E668A'; g.font='500 '+Math.round(SZ*0.028)+'px '+FONT; g.fillText(colors, SZ/2, y); }
+    y += SZ*0.05;
+    g.strokeStyle = '#DED8E8'; g.lineWidth = 2;
+    g.beginPath(); g.moveTo(m,y); g.lineTo(SZ-m,y); g.stroke();
+    y += SZ*0.10;
+    g.fillStyle = '#6C5B8C'; g.font = '800 '+Math.round(SZ*0.082)+'px '+FONT;
+    g.fillText(won(f.price)+'원', SZ/2, y); y += SZ*0.05;
+    if(inc){
+      g.fillStyle='#6E668A'; g.font='500 '+Math.round(SZ*0.026)+'px '+FONT;
+      g.fillText('원가 '+won(f.cost)+'원 · 남는 이익 '+won(f.profit)+'원', SZ/2, y);
+    }
+    g.fillStyle='#6E668A'; g.font='500 '+Math.round(SZ*0.024)+'px '+FONT;
+    g.fillText('매듭기록장 · 손으로 엮은 마이크로 마크라메', SZ/2, SZ-SZ*0.06);
+    shareCanvas = c;
+    done(c);
+  };
+
+  const box = [ (SZ-ph)/2, m, ph, ph ];
+  if(S.photos[0]){
+    const img = new Image();
+    img.onload = () => {
+      g.save(); roundRect(g, box[0], box[1], ph, ph, SZ*0.05); g.clip();
+      const s = Math.max(ph/img.width, ph/img.height);
+      const w = img.width*s, h = img.height*s;
+      g.drawImage(img, box[0]+(ph-w)/2, box[1]+(ph-h)/2, w, h);
+      g.restore(); rest();
+    };
+    img.onerror = () => { g.fillStyle='#E7E1F0'; g.save(); roundRect(g,box[0],box[1],ph,ph,SZ*0.05); g.fill(); g.restore(); rest(); };
+    img.src = S.photos[0];
+  }else{
+    g.save(); roundRect(g, box[0], box[1], ph, ph, SZ*0.05); g.clip();
+    g.fillStyle = '#E7E1F0'; g.fillRect(box[0],box[1],ph,ph);
+    g.strokeStyle = '#7C6AA8'; g.lineWidth = SZ*0.012;
+    for(let i=0;i<4;i++){
+      g.beginPath();
+      g.moveTo(box[0]+ph*0.18, box[1]+ph*(0.3+i*0.14));
+      g.bezierCurveTo(box[0]+ph*0.4, box[1]+ph*(0.22+i*0.14), box[0]+ph*0.6, box[1]+ph*(0.38+i*0.14), box[0]+ph*0.82, box[1]+ph*(0.3+i*0.14));
+      g.stroke();
+    }
+    g.restore(); rest();
+  }
+}
+function renderShare(){
+  const inc = $('incCost').checked;
+  $('tabCard').classList.toggle('on', shareTab==='card');
+  $('tabText').classList.toggle('on', shareTab==='text');
+  $('cardPrev').hidden = shareTab!=='card';
+  $('textPrev').hidden = shareTab!=='text';
+  if(shareTab==='card') drawCard(inc, c=>{ $('cardPrev').src = c.toDataURL('image/png'); });
+  else $('textPrev').textContent = buildText(inc);
+}
+$('btnShare').addEventListener('click', ()=>{ $('shareModal').hidden = false; renderShare(); });
+$('closeShare').addEventListener('click', ()=>{ $('shareModal').hidden = true; });
+$('shareModal').addEventListener('click', e=>{ if(e.target.id==='shareModal') $('shareModal').hidden = true; });
+$('tabCard').addEventListener('click', ()=>{ shareTab='card'; renderShare(); });
+$('tabText').addEventListener('click', ()=>{ shareTab='text'; renderShare(); });
+$('incCost').addEventListener('change', renderShare);
+$('doShare').addEventListener('click', async ()=>{
+  const inc = $('incCost').checked;
+  if(shareTab==='text'){
+    const text = buildText(inc);
+    if(navigator.share){ try{ await navigator.share({text}); }catch(e){} return; }
+    try{ await navigator.clipboard.writeText(text); flash('글을 복사했어요'); }
+    catch(e){ flash('복사할 수 없어요. 길게 눌러 복사해주세요'); }
+    return;
+  }
+  if(!shareCanvas) return;
+  shareCanvas.toBlob(async blob=>{
+    const name = (figures().name || '작품') + '.png';
+    try{
+      const file = new File([blob], name, {type:'image/png'});
+      if(navigator.canShare && navigator.canShare({files:[file]})){
+        await navigator.share({files:[file], title:figures().name});
+        return;
+      }
+    }catch(e){ return; }
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob); a.download = name; a.click();
+    flash('이미지를 저장했어요');
+  }, 'image/png');
+});
+
+/* ── 백업 파일 ── */
+$('btnExport').addEventListener('click', ()=>{
+  const blob = new Blob([JSON.stringify({works, lib, menu}, null, 2)], {type:'application/json'});
+  const d = new Date();
+  const stamp = d.getFullYear()+String(d.getMonth()+1).padStart(2,'0')+String(d.getDate()).padStart(2,'0');
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob); a.download = '매듭기록장-'+stamp+'.json'; a.click();
+  flash('백업 파일을 저장했어요');
+});
+$('fileImport').addEventListener('change', e=>{
+  const file = e.target.files && e.target.files[0];
+  e.target.value = '';
+  if(!file) return;
+  const fr = new FileReader();
+  fr.onload = () => {
+    try{
+      const data = JSON.parse(fr.result);
+      if(!data || (!data.works && !data.lib)) throw 0;
+      const mode = confirm('지금 자료를 지우고 파일 내용으로 바꿀까요?\n\n취소를 누르면 지금 자료에 더해서 넣습니다.');
+      if(mode){
+        works = data.works || []; lib = data.lib || lib;
+        if(data.menu) menu = data.menu;
+      }else{
+        works = (data.works||[]).concat(works);
+        (data.lib||[]).forEach(l=>{ if(!lib.find(x=>x.name===l.name)) lib.push(l); });
+      }
+      renderHome(); renderWorks(); save(); flash('가져왔어요');
+    }catch(err){ flash('읽을 수 없는 파일이에요'); }
+  };
+  fr.readAsText(file);
+});
+
+/* ── 시작 ── */
+(async ()=>{
+  const saved = await load();
+  if(saved && saved.lib) lib = saved.lib;
+  if(saved && saved.menu){
+    const keep = saved.menu.filter(m=>m.key==='lib'||m.key==='works');
+    ['lib','works'].forEach(k=>{ if(!keep.find(m=>m.key===k)) keep.push({key:k, label:k==='lib'?'재료 목록':'원가계산표'}); });
+    menu = keep;
+  }
+  if(saved && saved.works){
+    works = saved.works;
+    works.forEach(w=>{
+      if(!w.data.labors){
+        w.data.labors = [{id:uid(), name:'매듭 작업', minutes:w.data.minutes||'', wage:w.data.wage||''}];
+      }
+    });
+  }
+  openHome();
+})();
+</script>
+<script>
+if('serviceWorker' in navigator){
+  window.addEventListener('load', ()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));
+}
+</script>
+</body>
+</html>
