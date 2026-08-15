@@ -159,6 +159,8 @@
   .caret{color:var(--sub);font-size:11px}
   .libbody{padding:2px 0 14px}
   .gbar{display:flex;justify-content:space-between;align-items:center;padding:14px 2px 4px;font-size:11px;letter-spacing:.14em;color:var(--sub);font-weight:700}
+  #viewWork{display:flex;flex-direction:column}
+  body.rec .sum, body.rec .each, body.rec .buyinfo{display:none !important}
   #photoModal{background:rgba(16,13,26,.92);align-items:center}
   .viewer{width:100%;max-width:560px;padding:16px;display:flex;flex-direction:column;align-items:center;gap:12px}
   .viewer .frame{width:100%;overflow:auto;border-radius:18px;background:#000;display:flex;align-items:center;justify-content:center}
@@ -193,7 +195,7 @@
   </label>
   <div class="hint">재료 목록만 보내면 상대는 내 단가만 받고, 작품 기록은 넘어가지 않아요. 가져오기는 어떤 파일인지 알아서 구분합니다.</div>
 
-  <div class="ver">매듭기록장 · v30</div>
+  <div class="ver">매듭기록장 · v31</div>
 </section>
 
 <!-- ═══ 작품 목록 ═══ -->
@@ -236,7 +238,7 @@
     <div id="cntTotals" style="margin-top:14px;padding-top:12px;border-top:1px solid var(--line)"></div>
   </div>
 
-  <div class="row" style="gap:8px;margin-bottom:12px">
+  <div class="row" id="actRow" style="gap:8px;margin-bottom:12px">
     <button class="ghost" id="btnSale" style="margin:0">판매 등록</button>
     <button class="ghost" id="btnDup" style="margin:0">작품 복제</button>
   </div>
@@ -246,7 +248,7 @@
   </div>
   <div class="hint" id="saleSummary" style="margin:-4px 0 12px"></div>
 
-  <div class="card">
+  <div class="card" id="workCard">
     <div class="head"><span class="cap">작품</span><button class="link" id="btnShare">공유</button></div>
     <input type="text" id="title" placeholder="예: 물결 팔찌 7칸">
     <div class="shots" id="shots"></div>
@@ -265,23 +267,23 @@
     <div class="hint" id="photoHint"></div>
   </div>
 
-  <div class="card">
-    <div class="head"><span class="cap">재료비</span><button class="link" id="btnMat">+ 재료 추가</button></div>
+  <div class="card" id="matCard">
+    <div class="head"><span class="cap" id="matCap">재료비</span><button class="link" id="btnMat">+ 재료 추가</button></div>
     <div id="mats"></div>
-    <div class="total"><span>재료비 합계</span><span style="color:var(--teal)" id="matTotal">0원</span></div>
+    <div class="total" id="matTotalRow"><span>재료비 합계</span><span style="color:var(--teal)" id="matTotal">0원</span></div>
     <div class="hint">쓰는 재료가 목록에 없으면 <b id="goLib2" style="color:var(--violet)">재료 목록</b>에서 먼저 등록하세요.</div>
   </div>
 
-  <div class="card">
-    <div class="head"><span class="cap">인건비</span><button class="link" id="btnLaborAdd">+ 작업 추가</button></div>
+  <div class="card" id="laborCard">
+    <div class="head"><span class="cap" id="laborCap">인건비</span><button class="link" id="btnLaborAdd">+ 작업 추가</button></div>
     <div id="labors"></div>
-    <div class="total">
+    <div class="total" id="laborTotalRow">
       <button class="chip" id="btnLabor" style="padding:5px 12px;font-size:12px">포함 중</button>
       <span style="color:var(--rose)" id="laborSum">0원</span>
     </div>
   </div>
 
-  <div class="card">
+  <div class="card" id="etcCard">
     <div class="head"><span class="cap">기타비용</span><button class="link" id="btnEtc">+ 항목 추가</button></div>
     <div id="etcs"></div>
   </div>
@@ -633,12 +635,26 @@ function openWorks(){ curId = null; renderWorks(); renderHome(); show('works'); 
 let detailMode = 'price';   /* 'record' = 기록만, 'price' = 값 정하기 */
 function applyMode(){
   const rec = detailMode === 'record';
+  document.body.classList.toggle('rec', rec);
   $('resultCard').hidden = rec;
   $('countCard').hidden = rec;
   $('priceCard').hidden = rec;
+  $('etcCard').hidden = rec;
   $('btnSale').hidden = rec;
+  $('btnDup').hidden = !rec;
+  $('actRow').hidden = false;
   $('memoCard').hidden = !rec;
   $('saleSummary').hidden = rec;
+  $('matTotalRow').hidden = rec;
+  $('laborTotalRow').hidden = rec;
+  $('matCap').textContent = rec ? '재료' : '재료비';
+  $('laborCap').textContent = rec ? '소요시간' : '인건비';
+  /* 화면 순서: 기록은 작품 → 메모 → 재료 → 소요시간 */
+  const order = rec
+    ? {workCard:1, memoCard:2, matCard:3, laborCard:4, actRow:5, delWork:9}
+    : {resultCard:1, countCard:2, actRow:3, workCard:4, matCard:5, laborCard:6, etcCard:7, priceCard:8, delWork:9};
+  ['resultCard','countCard','actRow','memoCard','workCard','matCard','laborCard','etcCard','priceCard','delWork']
+    .forEach(id=>{ const el = $(id); if(el) el.style.order = order[id] || 6; });
   $('backWorks').textContent = '‹ ' + (rec ? labelOf('record') : labelOf('works'));
 }
 function openWork(id, mode){
@@ -1609,7 +1625,7 @@ $('btnDup').addEventListener('click', ()=>{
   (copy.labors||[]).forEach(l=>l.id = uid());
   copy.etc.forEach(x=>x.id = uid());
   const w = {id:uid(), data:copy, price:cur().price, cost:cur().cost, updated:Date.now()};
-  works.unshift(w); queueSave(); openWork(w.id); flash('복제했어요');
+  works.unshift(w); queueSave(); openWork(w.id, detailMode); flash('복제했어요');
 });
 
 /* ── 만들 개수 (참고용) ── */
