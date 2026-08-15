@@ -193,7 +193,7 @@
   </label>
   <div class="hint">재료 목록만 보내면 상대는 내 단가만 받고, 작품 기록은 넘어가지 않아요. 가져오기는 어떤 파일인지 알아서 구분합니다.</div>
 
-  <div class="ver">매듭기록장 · v27</div>
+  <div class="ver">매듭기록장 · v28</div>
 </section>
 
 <!-- ═══ 작품 목록 ═══ -->
@@ -632,6 +632,7 @@ function applyMode(){
   $('countCard').hidden = rec;
   $('priceCard').hidden = rec;
   $('btnSale').hidden = rec;
+  $('memoCard').hidden = !rec;
   $('saleSummary').hidden = rec;
   $('backWorks').textContent = '‹ ' + (rec ? labelOf('record') : labelOf('works'));
 }
@@ -1803,8 +1804,14 @@ $('fileImport').addEventListener('change', e=>{
   if(saved && saved.libSort) libSort = saved.libSort;
   if(saved && saved.saleSort) saleSort = saved.saleSort;
   if(saved && saved.menu){
+    const order = Object.keys(DEFMENU);
     const keep = saved.menu.filter(m=>DEFMENU[m.key]);
-    Object.keys(DEFMENU).forEach(k=>{ if(!keep.find(m=>m.key===k)) keep.push({key:k, label:DEFMENU[k]}); });
+    order.forEach((k,idx)=>{
+      if(keep.find(m=>m.key===k)) return;
+      let at = keep.length;
+      for(let i=0;i<keep.length;i++){ if(order.indexOf(keep[i].key) > idx){ at = i; break; } }
+      keep.splice(at, 0, {key:k, label:DEFMENU[k]});
+    });
     menu = keep;
   }
   if(saved && saved.works){
