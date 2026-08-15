@@ -193,7 +193,7 @@
   </label>
   <div class="hint">재료 목록만 보내면 상대는 내 단가만 받고, 작품 기록은 넘어가지 않아요. 가져오기는 어떤 파일인지 알아서 구분합니다.</div>
 
-  <div class="ver">매듭기록장 · v28</div>
+  <div class="ver">매듭기록장 · v29</div>
 </section>
 
 <!-- ═══ 작품 목록 ═══ -->
@@ -578,6 +578,11 @@ async function load(){
 let saveTimer;
 const queueSave = () => { clearTimeout(saveTimer); saveTimer = setTimeout(save, 400); };
 
+/* 삭제는 항상 한 번 물어봅니다 */
+function askDelete(what){
+  return window.confirm(what + '\n\n정말 삭제할까요? 되돌릴 수 없어요.');
+}
+
 let toastTimer;
 function flash(msg){
   const t = $('toast'); t.textContent = msg; t.classList.add('on');
@@ -781,6 +786,7 @@ $('works').addEventListener('click', e=>{
     renderWorks(); queueSave(); return;
   }
   if(e.target.closest('[data-x]')){
+    if(!askDelete('작품 "'+((w.data.title||'').trim()||'이름 없는 작품')+'"')) return;
     works = works.filter(x=>x.id!==w.id);
     renderWorks(); renderHome(); queueSave(); return;
   }
@@ -791,8 +797,10 @@ $('btnNew').addEventListener('click', ()=>{
   works.unshift(w); queueSave(); openWork(w.id);
 });
 $('delWork').addEventListener('click', ()=>{
+  if(!askDelete('작품 "'+((S.title||'').trim()||'이름 없는 작품')+'"')) return;
+  const back = detailMode==='record' ? openRecord : openWorks;
   works = works.filter(x=>x.id!==curId);
-  queueSave(); openWorks();
+  queueSave(); back();
 });
 
 /* ── 재료 목록 ── */
@@ -916,6 +924,7 @@ $('libs').addEventListener('click', e=>{
   if(!e.target.closest('[data-x]')) return;
   const el = e.target.closest('.libitem');
   const l = libOf(el.dataset.id);
+  if(!askDelete('재료 "'+(l.name||'이름 없음')+'"')) return;
   works.forEach(w => w.data.materials.forEach(m=>{
     if(m.libId===l.id){ m.libId=''; m.name=l.name; m.unit=l.unit; m.buyCost=l.cost; m.buyQty=l.qty; }
   }));
@@ -1001,6 +1010,7 @@ $('mats').addEventListener('change', matChanged);
 $('mats').addEventListener('click', e=>{
   if(!e.target.closest('[data-x]')) return;
   const el = e.target.closest('.mat');
+  if(!askDelete('이 재료 줄')) return;
   S.materials = S.materials.filter(x=>x.id!==el.dataset.id);
   renderMats(); calc(); queueSave();
 });
@@ -1065,7 +1075,7 @@ function renderPhotos(){
 $('shots').addEventListener('click', e=>{
   const rep = e.target.closest('[data-rep]'), del = e.target.closest('[data-del]'), add = e.target.closest('#btnAddPhoto');
   if(rep){ const i=+rep.dataset.rep; S.photos=[S.photos[i]].concat(S.photos.filter((_,k)=>k!==i)); renderPhotos(); queueSave(); }
-  else if(del){ S.photos.splice(+del.dataset.del,1); renderPhotos(); queueSave(); }
+  else if(del){ if(!askDelete('이 사진')) return; S.photos.splice(+del.dataset.del,1); renderPhotos(); queueSave(); }
   else if(add){ $('pick').hidden = !$('pick').hidden; }
 });
 $('fileCam').addEventListener('change', e=>{ addPhotos(e.target.files); e.target.value=''; });
@@ -1101,6 +1111,7 @@ $('labors').addEventListener('input', e=>{
 $('labors').addEventListener('click', e=>{
   if(!e.target.closest('[data-x]')) return;
   const el = e.target.closest('.mat');
+  if(!askDelete('이 작업 줄')) return;
   S.labors = S.labors.filter(v=>v.id!==el.dataset.id);
   renderLabors(); calc(); queueSave();
 });
@@ -1131,6 +1142,7 @@ $('etcs').addEventListener('input', e=>{
 $('etcs').addEventListener('click', e=>{
   if(!e.target.closest('[data-x]')) return;
   const el = e.target.closest('.row');
+  if(!askDelete('이 항목')) return;
   S.etc = S.etc.filter(v=>v.id!==el.dataset.id);
   renderEtc(); calc(); queueSave();
 });
@@ -1205,9 +1217,11 @@ function calc(){
     const el = $('mats').querySelector('[data-id="'+m.id+'"]');
     if(el){
       const s = el.querySelector('.sum');
-      s.textContent = won(sum)+'원'; s.classList.toggle('on', sum>0);
-      el.querySelector('.row:last-child .each').textContent = up>0 ? r.unit+'당 '+perUnit(up)+'원' : '';
-      el.querySelector('.usedunit').textContent = r.unit;
+      if(s){ s.textContent = won(sum)+'원'; s.classList.toggle('on', sum>0); }
+      const eachEl = el.querySelector('.row:last-child .each');
+      if(eachEl) eachEl.textContent = up>0 ? r.unit+'당 '+perUnit(up)+'원' : '';
+      const uu = el.querySelector('.usedunit');
+      if(uu) uu.textContent = r.unit;
     }
   });
   let labor = 0;
@@ -1286,6 +1300,7 @@ $('pRep').addEventListener('click', ()=>{
   renderPhotos(); queueSave(); showPhoto(0); flash('대표 사진으로 바꿨어요');
 });
 $('pDel').addEventListener('click', ()=>{
+  if(!askDelete('이 사진')) return;
   S.photos.splice(photoIdx,1);
   renderPhotos(); queueSave();
   if(!S.photos.length){ $('photoModal').hidden = true; return; }
@@ -1421,6 +1436,7 @@ $('saleSorts').addEventListener('click', e=>{
 $('salesList').addEventListener('click', e=>{
   const row = e.target.closest('.sale'); if(!row) return;
   if(!e.target.closest('[data-x]')) return;
+  if(!askDelete('이 판매 기록')) return;
   sales = sales.filter(x=>x.id!==row.dataset.id);
   renderSales(); renderHome(); queueSave();
 });
@@ -1447,12 +1463,19 @@ function renderRecord(){
       (t ? '<img src="'+t+'" alt="">' : '<svg width="18" height="18" viewBox="0 0 24 24" fill="none"><rect x="2.5" y="5.5" width="19" height="14" rx="3" stroke="#6E668A" stroke-width="1.6"/><circle cx="12" cy="12.5" r="3.6" stroke="#6E668A" stroke-width="1.6"/></svg>') +
       (shots.length>1 ? '<b>'+shots.length+'</b>' : '') +
       '</span><span><span class="name">'+esc(name)+'</span><br>' +
-      '<span class="meta">'+esc(info)+'</span></span></button></div>';
+      '<span class="meta">'+esc(info)+'</span></span></button>' +
+      '<button class="x" data-x>×</button></div>';
   }).join('');
 }
 $('recordList').addEventListener('click', e=>{
   const row = e.target.closest('.work'); if(!row) return;
-  openWork(row.dataset.id, 'record');
+  const w = works.find(x=>x.id===row.dataset.id); if(!w) return;
+  if(e.target.closest('[data-x]')){
+    if(!askDelete('작품 "'+((w.data.title||'').trim()||'이름 없는 작품')+'"')) return;
+    works = works.filter(x=>x.id!==w.id);
+    renderRecord(); renderHome(); queueSave(); return;
+  }
+  openWork(w.id, 'record');
 });
 $('btnNewRec').addEventListener('click', ()=>{
   const w = {id:uid(), data:blank(), price:0, cost:0, updated:Date.now()};
