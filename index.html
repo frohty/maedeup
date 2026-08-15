@@ -193,7 +193,7 @@
   </label>
   <div class="hint">재료 목록만 보내면 상대는 내 단가만 받고, 작품 기록은 넘어가지 않아요. 가져오기는 어떤 파일인지 알아서 구분합니다.</div>
 
-  <div class="ver">매듭기록장 · v29</div>
+  <div class="ver">매듭기록장 · v30</div>
 </section>
 
 <!-- ═══ 작품 목록 ═══ -->
@@ -1229,7 +1229,10 @@ function calc(){
     const sum = S.useLabor ? (n(l.minutes)/60)*n(l.wage) : 0;
     labor += sum;
     const el = $('labors').querySelector('[data-id="'+l.id+'"]');
-    if(el){ const s = el.querySelector('.sum'); s.textContent = won(sum)+'원'; s.classList.toggle('on', sum>0); }
+    if(el){
+      const s = el.querySelector('.sum');
+      if(s){ s.textContent = won(sum)+'원'; s.classList.toggle('on', sum>0); }
+    }
   });
   const etcSum = S.etc.reduce((a,b)=>a+n(b.amount),0);
   const cost = material + labor + etcSum;
