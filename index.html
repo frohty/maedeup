@@ -142,6 +142,10 @@
   .sale:last-child{border-bottom:0}
   .badge{font-size:11px;font-weight:700;color:#fff;padding:3px 9px;border-radius:99px}
   .b-done{background:var(--mint)} .b-making{background:var(--gold)}
+  .todo{display:flex;align-items:center;gap:10px;padding:12px 0;border-bottom:1px dashed var(--line)}
+  .todo:last-child{border-bottom:0}
+  .tick{width:28px;height:28px;flex:0 0 auto;border:2px solid var(--line);border-radius:9px;background:transparent}
+  .b-late{background:var(--rose)} .b-soon{background:var(--gold)} .b-ok{background:#B9B2CC}
   .swatch{width:44px;height:44px;flex:0 0 auto;border-radius:12px;border:1px solid var(--line);background:#F3F0F8}
   .cgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:12px}
   .cbtn{border:1px solid var(--line);background:transparent;border-radius:14px;padding:8px 4px;display:flex;flex-direction:column;align-items:center;gap:5px}
@@ -189,7 +193,7 @@
   </label>
   <div class="hint">재료 목록만 보내면 상대는 내 단가만 받고, 작품 기록은 넘어가지 않아요. 가져오기는 어떤 파일인지 알아서 구분합니다.</div>
 
-  <div class="ver">매듭기록장 · v25</div>
+  <div class="ver">매듭기록장 · v26</div>
 </section>
 
 <!-- ═══ 작품 목록 ═══ -->
@@ -297,6 +301,17 @@
   <button class="danger" id="delWork">이 작품 삭제</button>
 </section>
 
+<!-- ═══ 제작중 ═══ -->
+<section id="viewMaking" hidden>
+  <button class="back" id="backHome4">‹ 처음으로</button>
+  <h1 id="makingTitle">제작중</h1>
+  <div class="card">
+    <div class="head"><span class="cap">만들어야 할 것</span><span class="cap" id="makingCount"></span></div>
+    <div id="makingList"></div>
+    <div class="hint">판매 등록에서 상태를 <b>제작중</b>으로 두면 여기에 모입니다. 다 만들면 왼쪽 네모를 눌러 발송완료로 바꾸세요.</div>
+  </div>
+</section>
+
 <!-- ═══ 판매 기록 ═══ -->
 <section id="viewSales" hidden>
   <button class="back" id="backHome3">‹ 처음으로</button>
@@ -392,7 +407,10 @@
     <div style="font-size:12px;color:var(--sub);margin:6px 0 6px">상태</div>
     <div class="sorts" id="sStatus"></div>
 
-    <div style="font-size:12px;color:var(--sub);margin:6px 0 6px">메모</div>
+    <div style="font-size:12px;color:var(--sub);margin:6px 0 6px">마감일 (선택)</div>
+    <input type="date" id="sDue" style="width:100%;border:1px solid var(--line);background:#FBFAFD;border-radius:12px;padding:11px;font-size:15px;font-weight:600;color:var(--ink)">
+
+    <div style="font-size:12px;color:var(--sub);margin:14px 0 6px">메모</div>
     <input type="text" id="sMemo" placeholder="예: 선물 포장 요청">
 
     <button class="primary" id="saveSale">저장</button>
@@ -437,7 +455,7 @@ let lib = [
 let works = [];
 let curId = null;
 /* 첫 화면 메뉴: 이름과 순서를 직접 바꿀 수 있습니다 */
-let menu = [{key:'lib', label:'재료 목록'}, {key:'works', label:'원가계산표'}, {key:'sales', label:'판매 기록'}];
+let menu = [{key:'lib', label:'재료 목록'}, {key:'works', label:'원가계산표'}, {key:'making', label:'제작중'}, {key:'sales', label:'판매 기록'}];
 let sales = [];
 let libSort = 'mine', saleSort = 'new';
 let saleMonth = null;  /* 'YYYY-MM' 또는 null(전체) */
@@ -501,13 +519,14 @@ const colorCss = (kind, memo) => {
   const hit = paletteOf(kind).find(c=>(c.no+'. '+c.name)===memo || c.name===memo);
   return hit ? hit.css : '';
 };
-const DEFMENU = {lib:'재료 목록', works:'원가계산표', sales:'판매 기록'};
+const DEFMENU = {lib:'재료 목록', works:'원가계산표', making:'제작중', sales:'판매 기록'};
 let homeEdit = false;
 let sortBy = 'recent';
 const ICON = {
   lib:'<svg width="22" height="22" viewBox="0 0 24 24" fill="none"><rect x="6" y="3.5" width="12" height="17" rx="2" stroke="#6C5B8C" stroke-width="1.6"/><path d="M6 8h12M6 16h12" stroke="#6C5B8C" stroke-width="1.6"/></svg>',
   works:'<svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M9.2 15.6c-2.3 0-4.2-1.6-4.2-3.6S6.9 8.4 9.2 8.4c2.7 0 4 2.2 6.2 2.2" stroke="#6C5B8C" stroke-width="1.7" stroke-linecap="round"/><path d="M14.8 8.4c2.3 0 4.2 1.6 4.2 3.6s-1.9 3.6-4.2 3.6c-2.7 0-4-2.2-6.2-2.2" stroke="#6C5B8C" stroke-width="1.7" stroke-linecap="round"/><path d="M3 12h2M19 12h2" stroke="#6C5B8C" stroke-width="1.7" stroke-linecap="round"/></svg>',
-  sales:'<svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M5 4.5h11l3.5 3.6V19a.9.9 0 0 1-.9.9H5a.9.9 0 0 1-.9-.9V5.4A.9.9 0 0 1 5 4.5Z" stroke="#6C5B8C" stroke-width="1.6" stroke-linejoin="round"/><path d="M8 11h8M8 15h5" stroke="#6C5B8C" stroke-width="1.6" stroke-linecap="round"/></svg>'
+  sales:'<svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M5 4.5h11l3.5 3.6V19a.9.9 0 0 1-.9.9H5a.9.9 0 0 1-.9-.9V5.4A.9.9 0 0 1 5 4.5Z" stroke="#6C5B8C" stroke-width="1.6" stroke-linejoin="round"/><path d="M8 11h8M8 15h5" stroke="#6C5B8C" stroke-width="1.6" stroke-linecap="round"/></svg>',
+  making:'<svg width="22" height="22" viewBox="0 0 24 24" fill="none"><rect x="4" y="4.5" width="16" height="15" rx="3" stroke="#6C5B8C" stroke-width="1.6"/><path d="M8 10.5l2.2 2.2L16 7.5" stroke="#6C5B8C" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M8 16h8" stroke="#6C5B8C" stroke-width="1.6" stroke-linecap="round"/></svg>'
 };
 const labelOf = k => { const m = menu.find(x=>x.key===k); return m ? m.label : ''; };
 
@@ -555,6 +574,7 @@ function show(view){
   $('viewWork').hidden  = view !== 'work';
   $('viewLib').hidden   = view !== 'lib';
   $('viewSales').hidden = view !== 'sales';
+  $('viewMaking').hidden = view !== 'making';
   window.scrollTo(0,0);
 }
 /* 폰의 뒤로가기 버튼으로도 이전 화면에 가도록 기록을 남깁니다 */
@@ -579,6 +599,7 @@ window.addEventListener('popstate', e=>{
   else if(st.view==='works') openWorks();
   else if(st.view==='lib') openLib();
   else if(st.view==='sales') openSales();
+  else if(st.view==='making') openMaking();
   else openHome();
   navBack = false;
 });
@@ -596,6 +617,7 @@ function openWork(id){
   show('work'); mark('work', id);
 }
 function openLib(){ renderLib(); show('lib'); mark('lib'); }
+function openMaking(){ renderMaking(); show('making'); mark('making'); }
 function openSales(){
   if(saleMonth === undefined) saleMonth = null;
   if(saleMonth === null && sales.length === 0) saleMonth = ym(new Date());
@@ -606,12 +628,14 @@ $('backHome0').addEventListener('click', openHome);
 $('backWorks').addEventListener('click', openWorks);
 $('backHome2').addEventListener('click', openHome);
 $('backHome3').addEventListener('click', openHome);
+$('backHome4').addEventListener('click', openHome);
 
 /* ── 홈 ── */
 function renderHome(){
   $('menu').innerHTML = menu.map((m,i)=>{
     const sub = m.key==='lib' ? '등록된 재료 '+lib.length+'개'
               : m.key==='sales' ? '이번 달 '+monthSales(ym(new Date())).length+'건'
+              : m.key==='making' ? (making().length ? '만들 것 '+making().length+'건' : '지금은 없어요')
               : '기록한 작품 '+works.length+'개';
     if(homeEdit){
       return '<div class="tile" data-i="'+i+'">' +
@@ -628,6 +652,7 @@ function renderHome(){
   }).join('');
   $('btnEditMenu').textContent = homeEdit ? '완료' : '이름\u00b7순서 편집';
   $('salesTitle').textContent = labelOf('sales');
+  $('makingTitle').textContent = labelOf('making');
   $('btnExportLib').textContent = labelOf('lib') + '만 내보내기';
   $('btnExportWorks').textContent = labelOf('works') + '만 내보내기';
   syncLabels();
@@ -650,6 +675,7 @@ $('menu').addEventListener('click', e=>{
   const b = e.target.closest('[data-key]'); if(!b) return;
   if(b.dataset.key==='lib') openLib();
   else if(b.dataset.key==='sales') openSales();
+  else if(b.dataset.key==='making') openMaking();
   else openWorks();
 });
 $('menu').addEventListener('input', e=>{
@@ -1322,6 +1348,51 @@ $('salesList').addEventListener('click', e=>{
   renderSales(); renderHome(); queueSave();
 });
 
+/* ── 제작중 목록 ── */
+const today = () => { const d=new Date(); return d.getFullYear()+'-'+pad2(d.getMonth()+1)+'-'+pad2(d.getDate()); };
+function making(){
+  return sales.filter(x=>x.status==='making').sort((a,b)=>{
+    const A = a.due || '9999', B = b.due || '9999';
+    return A===B ? (a.date||'').localeCompare(b.date||'') : A.localeCompare(B);
+  });
+}
+function dueBadge(due){
+  if(!due) return '<span class="badge b-ok">기한 없음</span>';
+  const t = today();
+  const diff = Math.round((new Date(due) - new Date(t))/86400000);
+  if(diff < 0) return '<span class="badge b-late">'+(-diff)+'일 지남</span>';
+  if(diff === 0) return '<span class="badge b-late">오늘까지</span>';
+  if(diff <= 3) return '<span class="badge b-soon">'+diff+'일 남음</span>';
+  return '<span class="badge b-ok">'+diff+'일 남음</span>';
+}
+function renderMaking(){
+  const list = making();
+  $('makingCount').textContent = list.length ? list.length+'건' : '';
+  if(!list.length){
+    $('makingList').innerHTML = '<div class="hint" style="margin:0">지금 만들어야 할 게 없어요.</div>';
+    return;
+  }
+  $('makingList').innerHTML = list.map(x=>{
+    const who = [x.customer, x.channel].filter(Boolean).join(' · ');
+    return '<div class="todo" data-id="'+x.id+'">' +
+      '<button class="tick" data-done></button>' +
+      '<span style="flex:1;min-width:0">' +
+        '<span style="font-size:14.5px;font-weight:700">'+esc(x.name)+' ×'+n(x.qty||1)+'</span><br>' +
+        '<span style="font-size:11.5px;color:var(--sub)">'+esc(who || (x.date||''))+'</span>' +
+        (x.memo ? '<br><span style="font-size:11.5px;color:var(--violet)">'+esc(x.memo)+'</span>' : '') +
+      '</span>' +
+      dueBadge(x.due) +
+    '</div>';
+  }).join('');
+}
+$('makingList').addEventListener('click', e=>{
+  const row = e.target.closest('.todo'); if(!row) return;
+  if(!e.target.closest('[data-done]')) return;
+  const x = sales.find(v=>v.id===row.dataset.id); if(!x) return;
+  x.status = 'done';
+  renderMaking(); renderHome(); queueSave(); flash('발송완료로 바꿨어요');
+});
+
 /* 판매 등록 팝업 */
 let saleDraft = null;
 function saleChips(){
@@ -1339,6 +1410,7 @@ function openSaleForm(){
   $('sAmount').value = String(w.price||0);
   $('sCustomer').value = '';
   $('sMemo').value = '';
+  $('sDue').value = '';
   saleChips();
   $('saleModal').hidden = false;
 }
@@ -1376,6 +1448,7 @@ $('saveSale').addEventListener('click', ()=>{
     customer: $('sCustomer').value.trim(),
     channel: saleDraft.channel,
     status: saleDraft.status,
+    due: $('sDue').value || '',
     memo: $('sMemo').value.trim()
   });
   $('saleModal').hidden = true;
