@@ -124,7 +124,7 @@
   .tab{flex:1;border:1px solid var(--line);background:transparent;color:var(--sub);border-radius:14px;padding:12px;font-size:14px;font-weight:700}
   .tab.on{background:var(--violet);border-color:var(--violet);color:#fff}
   #cardPrev{width:100%;border-radius:16px;display:block;border:1px solid var(--line)}
-  #textPrev{white-space:pre-wrap;font-size:14px;line-height:1.7;background:#FBFAFD;border:1px solid var(--line);border-radius:14px;padding:14px}
+  #textPrev{width:100%;font-size:14px;line-height:1.7;background:#FBFAFD;border:1px solid var(--line);border-radius:14px;padding:14px;color:var(--ink);font-family:inherit;resize:vertical;outline:none}
   .primary{width:100%;background:var(--ink);color:#fff;border:0;border-radius:16px;padding:15px;font-size:15px;font-weight:800;margin-top:14px}
   .ghost{width:100%;background:transparent;color:var(--sub);border:1px solid var(--line);border-radius:16px;padding:13px;font-size:14px;font-weight:700;margin-top:8px;display:block;text-align:center;position:relative}
   .check{display:flex;align-items:center;gap:8px;margin-top:12px;font-size:13px;color:var(--sub)}
@@ -195,7 +195,7 @@
   </label>
   <div class="hint">재료 목록만 보내면 상대는 내 단가만 받고, 작품 기록은 넘어가지 않아요. 가져오기는 어떤 파일인지 알아서 구분합니다.</div>
 
-  <div class="ver">매듭기록장 · v31</div>
+  <div class="ver">매듭기록장 · v32</div>
 </section>
 
 <!-- ═══ 작품 목록 ═══ -->
@@ -445,7 +445,7 @@
       <button class="tab" id="tabText">글</button>
     </div>
     <img id="cardPrev" alt="공유 카드 미리보기">
-    <div id="textPrev" hidden></div>
+    <textarea id="textPrev" rows="9" hidden></textarea>
     <label class="check"><input type="checkbox" id="incMat" checked> 사용한 재료도 함께 넣기</label>
     <label class="check"><input type="checkbox" id="incCost"> 원가·이익도 함께 넣기</label>
     <button class="primary" id="doShare">공유하기</button>
@@ -1656,6 +1656,19 @@ function figures(){
           profit:(w.price||0)-feeAmt-(w.cost||0)};
 }
 function buildText(mat, inc){
+  if(detailMode === 'record'){
+    const name = (S.title||'').trim() || '이름 없는 작품';
+    let t = name;
+    const list = usedList();
+    if(list.length) t += '\n\n[재료]\n' + list.map(x=>'· '+x).join('\n');
+    const jobs = (S.labors||[]).filter(l=>n(l.minutes)).map(l=>'· '+((l.name||'').trim()||'작업')+' '+n(l.minutes)+'분');
+    if(jobs.length){
+      const total = (S.labors||[]).reduce((a,b)=>a+n(b.minutes),0);
+      t += '\n\n[소요시간] 모두 '+total+'분\n' + jobs.join('\n');
+    }
+    if((S.memo||'').trim()) t += '\n\n[메모]\n' + S.memo.trim();
+    return t + '\n\n— 매듭기록장';
+  }
   const f = figures();
   let t = f.name + '\n판매가 ' + won(f.price) + '원';
   const list = usedList();
@@ -1673,11 +1686,42 @@ function drawCard(mat, inc, done){
   c.width = SZ; c.height = SZ;
   const g = c.getContext('2d');
   const f = figures();
-  const lines = mat ? usedList().slice(0,6) : [];
-  const m = SZ*0.07, ph = lines.length > 2 ? SZ*0.34 : (lines.length ? SZ*0.40 : SZ*0.44);
+  const rec = detailMode === 'record';
+  const lines = (mat || rec) ? usedList().slice(0,6) : [];
+  const m = SZ*0.07, ph = rec ? SZ*0.32 : (lines.length > 2 ? SZ*0.34 : (lines.length ? SZ*0.40 : SZ*0.44));
   g.fillStyle = '#FBFAFD'; g.fillRect(0,0,SZ,SZ);
 
+  const restRecord = () => {
+    let y = m + ph + SZ*0.09;
+    g.textAlign = 'center';
+    g.fillStyle = '#2A2340'; g.font = '800 '+Math.round(SZ*0.052)+'px '+FONT;
+    g.fillText((S.title||'').trim() || '이름 없는 작품', SZ/2, y); y += SZ*0.05;
+    g.fillStyle = '#6E668A'; g.font = '500 '+Math.round(SZ*0.026)+'px '+FONT;
+    usedList().slice(0,5).forEach(t=>{ g.fillText('· '+t, SZ/2, y); y += SZ*0.038; });
+    const total = (S.labors||[]).reduce((a,b)=>a+n(b.minutes),0);
+    if(total){
+      y += SZ*0.012;
+      g.fillStyle = '#A8446A'; g.font = '700 '+Math.round(SZ*0.028)+'px '+FONT;
+      g.fillText('소요시간 '+total+'분', SZ/2, y); y += SZ*0.042;
+    }
+    const memo = (S.memo||'').trim();
+    if(memo){
+      g.strokeStyle = '#DED8E8'; g.lineWidth = 2;
+      g.beginPath(); g.moveTo(m,y); g.lineTo(SZ-m,y); g.stroke();
+      y += SZ*0.045;
+      g.fillStyle = '#2A2340'; g.font = '500 '+Math.round(SZ*0.028)+'px '+FONT;
+      memo.split('\n').slice(0,4).forEach(line=>{
+        g.fillText(line.length > 26 ? line.slice(0,26)+'…' : line, SZ/2, y);
+        y += SZ*0.042;
+      });
+    }
+    g.fillStyle='#6E668A'; g.font='500 '+Math.round(SZ*0.024)+'px '+FONT;
+    g.fillText('매듭기록장 · 손으로 엮은 마이크로 마크라메', SZ/2, SZ-SZ*0.055);
+    shareCanvas = c;
+    done(c);
+  };
   const rest = () => {
+    if(detailMode === 'record') return restRecord();
     let y = m + ph + SZ*0.095;
     g.textAlign = 'center';
     g.fillStyle = '#2A2340'; g.font = '800 '+Math.round(SZ*0.055)+'px '+FONT;
@@ -1732,13 +1776,17 @@ function drawCard(mat, inc, done){
   }
 }
 function renderShare(){
-  const inc = $('incCost').checked, mat = $('incMat').checked;
+  const rec = detailMode === 'record';
+  $('incMat').parentNode.hidden = rec;
+  $('incCost').parentNode.hidden = rec;
+  const inc = rec ? false : $('incCost').checked;
+  const mat = rec ? true : $('incMat').checked;
   $('tabCard').classList.toggle('on', shareTab==='card');
   $('tabText').classList.toggle('on', shareTab==='text');
   $('cardPrev').hidden = shareTab!=='card';
   $('textPrev').hidden = shareTab!=='text';
   if(shareTab==='card') drawCard(mat, inc, c=>{ $('cardPrev').src = c.toDataURL('image/png'); });
-  else $('textPrev').textContent = buildText(mat, inc);
+  else $('textPrev').value = buildText(mat, inc);
 }
 $('btnShare').addEventListener('click', ()=>{ $('shareModal').hidden = false; renderShare(); });
 $('closeShare').addEventListener('click', ()=>{ $('shareModal').hidden = true; });
@@ -1748,9 +1796,11 @@ $('tabText').addEventListener('click', ()=>{ shareTab='text'; renderShare(); });
 $('incCost').addEventListener('change', renderShare);
 $('incMat').addEventListener('change', renderShare);
 $('doShare').addEventListener('click', async ()=>{
-  const inc = $('incCost').checked, mat = $('incMat').checked;
+  const rec = detailMode === 'record';
+  const inc = rec ? false : $('incCost').checked;
+  const mat = rec ? true : $('incMat').checked;
   if(shareTab==='text'){
-    const text = buildText(mat, inc);
+    const text = $('textPrev').value || buildText(mat, inc);
     if(navigator.share){ try{ await navigator.share({text}); }catch(e){} return; }
     try{ await navigator.clipboard.writeText(text); flash('글을 복사했어요'); }
     catch(e){ flash('복사할 수 없어요. 길게 눌러 복사해주세요'); }
