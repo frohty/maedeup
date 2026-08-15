@@ -117,6 +117,7 @@
   .ver{text-align:center;font-size:10.5px;color:var(--sub);margin-top:10px}
   .modal{position:fixed;inset:0;background:rgba(20,16,32,.55);display:flex;align-items:flex-end;justify-content:center;z-index:50}
   .modal[hidden]{display:none !important}
+  [hidden]{display:none !important}
   .sheet{background:var(--surface);width:100%;max-width:460px;border-radius:24px 24px 0 0;padding:16px 16px 24px;max-height:92vh;overflow:auto}
   .grab{width:92px;height:6px;border-radius:6px;background:var(--line);margin:2px auto 14px}
   .tabs{display:flex;gap:8px;margin-bottom:14px}
@@ -128,6 +129,40 @@
   .ghost{width:100%;background:transparent;color:var(--sub);border:1px solid var(--line);border-radius:16px;padding:13px;font-size:14px;font-weight:700;margin-top:8px;display:block;text-align:center;position:relative}
   .check{display:flex;align-items:center;gap:8px;margin-top:12px;font-size:13px;color:var(--sub)}
   .check input{width:20px;height:20px}
+  .stepbtn{width:64px;height:56px;border:1px solid var(--line);background:transparent;color:var(--violet);border-radius:16px;font-size:22px;font-weight:800}
+  .cntbox{min-width:104px;text-align:center;background:#F3F0F8;border-radius:16px;padding:15px 8px;font-size:18px;font-weight:800;color:var(--ink)}
+  .trow{display:flex;justify-content:space-between;align-items:baseline;padding:5px 0;font-size:14px;color:var(--sub)}
+  .trow b{font-size:15px;font-weight:800}
+  .sorts{display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap}
+  .ord{background:none;border:0;color:var(--sub);font-size:17px;padding:0 4px;line-height:1}
+  .monthbar{display:flex;align-items:center;gap:8px;margin-bottom:12px}
+  .monthbar button{background:none;border:0;color:var(--violet);font-size:22px;font-weight:800;padding:0 8px}
+  .monthbar .now{flex:1;text-align:center;font-size:17px;font-weight:800;color:var(--ink);background:none;border:0}
+  .sale{padding:10px 0;border-bottom:1px dashed var(--line)}
+  .sale:last-child{border-bottom:0}
+  .badge{font-size:11px;font-weight:700;color:#fff;padding:3px 9px;border-radius:99px}
+  .b-done{background:var(--mint)} .b-making{background:var(--gold)}
+  .swatch{width:44px;height:44px;flex:0 0 auto;border-radius:12px;border:1px solid var(--line);background:#F3F0F8}
+  .cgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:12px}
+  .cbtn{border:1px solid var(--line);background:transparent;border-radius:14px;padding:8px 4px;display:flex;flex-direction:column;align-items:center;gap:5px}
+  .cbtn.on{border-color:var(--violet);background:#F3F0F8}
+  .cdot{width:36px;height:36px;border-radius:99px;border:1px solid rgba(42,35,64,.15)}
+  .cbtn span{font-size:10.5px;color:var(--sub);font-weight:600;line-height:1.2;text-align:center}
+  .libitem{padding:0;margin:0;border-bottom:1px dashed var(--line)}
+  .libhead{display:flex;align-items:center;gap:8px;padding:13px 2px}
+  .lname{flex:1;font-size:15px;font-weight:700;color:var(--ink);min-width:0}
+  .lunit{font-size:12px;color:var(--sub)}
+  .caret{color:var(--sub);font-size:11px}
+  .libbody{padding:2px 0 14px}
+  .gbar{display:flex;justify-content:space-between;align-items:center;padding:14px 2px 4px;font-size:11px;letter-spacing:.14em;color:var(--sub);font-weight:700}
+  #photoModal{background:rgba(16,13,26,.92);align-items:center}
+  .viewer{width:100%;max-width:560px;padding:16px;display:flex;flex-direction:column;align-items:center;gap:12px}
+  .viewer .frame{width:100%;overflow:auto;border-radius:18px;background:#000;display:flex;align-items:center;justify-content:center}
+  .viewer img{max-width:100%;max-height:70vh;display:block;transition:transform .2s;transform-origin:center}
+  .viewer img.zoom{transform:scale(2)}
+  .vbar{display:flex;align-items:center;gap:10px;width:100%;color:#fff}
+  .vbar button{background:rgba(255,255,255,.14);border:0;color:#fff;border-radius:14px;padding:10px 14px;font-size:14px;font-weight:700}
+  .vcount{flex:1;text-align:center;font-size:13px;color:rgba(255,255,255,.75);font-weight:600}
   svg{display:block}
 </style>
 </head>
@@ -146,13 +181,15 @@
   <div id="menu"></div>
 
   <div class="head" style="margin:20px 0 8px"><span class="cap">자료 보관</span></div>
-  <button class="ghost" id="btnExport">백업 파일로 내보내기</button>
+  <button class="ghost" id="btnExportAll">전체 백업 내보내기</button>
+  <button class="ghost" id="btnExportLib">재료 목록만 내보내기</button>
+  <button class="ghost" id="btnExportWorks">작품 기록만 내보내기</button>
   <label class="ghost">백업 파일 가져오기
     <input type="file" accept=".json,application/json" id="fileImport" style="position:absolute;inset:0;width:100%;height:100%;opacity:0">
   </label>
-  <div class="hint">폰을 바꾸거나 다른 사람에게 재료 목록을 넘길 때 쓰세요.</div>
+  <div class="hint">재료 목록만 보내면 상대는 내 단가만 받고, 작품 기록은 넘어가지 않아요. 가져오기는 어떤 파일인지 알아서 구분합니다.</div>
 
-  <div class="ver">매듭기록장 · v15</div>
+  <div class="ver">매듭기록장 · v24</div>
 </section>
 
 <!-- ═══ 작품 목록 ═══ -->
@@ -161,6 +198,7 @@
   <h1 id="worksTitle">원가계산표</h1>
   <div class="card">
     <div class="head"><span class="cap">작품</span><span class="cap" id="workCount"></span></div>
+    <div class="sorts" id="sorts"></div>
     <div id="works"></div>
     <button class="newbtn" id="btnNew">+ 새 작품 만들기</button>
   </div>
@@ -182,6 +220,23 @@
     </div>
     <div class="warn" id="warn" hidden>수수료를 빼면 남는 게 없어요. 마진율을 낮추거나 수수료 반영을 켜세요.</div>
   </div>
+
+  <div class="card">
+    <div class="head"><span class="cap">만들 개수</span><span class="cap">참고용</span></div>
+    <div class="row">
+      <button class="stepbtn" id="cntMinus">−</button>
+      <div class="cntbox" id="cntVal">1개</div>
+      <button class="stepbtn" id="cntPlus">+</button>
+      <span style="font-size:12px;color:var(--sub);line-height:1.4">판매가·원가는<br>1개 기준 그대로예요</span>
+    </div>
+    <div id="cntTotals" style="margin-top:14px;padding-top:12px;border-top:1px solid var(--line)"></div>
+  </div>
+
+  <div class="row" style="gap:8px;margin-bottom:12px">
+    <button class="ghost" id="btnSale" style="margin:0">판매 등록</button>
+    <button class="ghost" id="btnDup" style="margin:0">작품 복제</button>
+  </div>
+  <div class="hint" id="saleSummary" style="margin:-4px 0 12px"></div>
 
   <div class="card">
     <div class="head"><span class="cap">작품</span><button class="link" id="btnShare">공유</button></div>
@@ -242,17 +297,108 @@
   <button class="danger" id="delWork">이 작품 삭제</button>
 </section>
 
+<!-- ═══ 판매 기록 ═══ -->
+<section id="viewSales" hidden>
+  <button class="back" id="backHome3">‹ 처음으로</button>
+  <h1 id="salesTitle">판매 기록</h1>
+
+  <div class="result">
+    <div class="monthbar" style="margin-bottom:6px">
+      <button id="mPrev">‹</button>
+      <button class="now" id="mNow" style="color:#fff">2026년 8월</button>
+      <button id="mNext">›</button>
+    </div>
+    <div class="stats" style="border-top:0;padding-top:6px;margin-top:0" id="saleStats"></div>
+  </div>
+
+  <div class="card">
+    <div class="head"><span class="cap">기록</span><span class="cap" id="saleCount"></span></div>
+    <div class="sorts" id="saleSorts"></div>
+    <div id="salesList"></div>
+  </div>
+</section>
+
 <!-- ═══ 재료 목록 ═══ -->
 <section id="viewLib" hidden>
   <button class="back" id="backHome2">‹ 처음으로</button>
   <h1 id="libTitle">재료 목록</h1>
   <div class="card">
     <div class="head"><span class="cap">등록한 재료</span><button class="link" id="btnLibAdd">+ 재료 등록</button></div>
+    <input type="text" id="libSearch" placeholder="재료 이름으로 찾기" style="margin-bottom:12px">
+    <div class="sorts" id="libSorts"></div>
     <div id="libs"></div>
     <div class="hint">구매할 때마다 여기에 넣어두세요. 작품에서 이름만 고르면 단가가 자동으로 들어옵니다. 값이 오르면 여기 금액만 고치면 돼요.</div>
   </div>
 </section>
 
+
+<div class="modal" id="photoModal" hidden>
+  <div class="viewer">
+    <div class="frame"><img id="photoBig" alt="작품 사진"></div>
+    <div class="vbar">
+      <button id="pPrev">‹</button>
+      <span class="vcount" id="pCount">1 / 1</span>
+      <button id="pNext">›</button>
+    </div>
+    <div class="vbar">
+      <button id="pRep" style="flex:1">대표로</button>
+      <button id="pDel" style="flex:1">삭제</button>
+      <button id="pClose" style="flex:1">닫기</button>
+    </div>
+    <div style="font-size:11.5px;color:rgba(255,255,255,.6)">사진을 누르면 크게·작게 볼 수 있어요</div>
+  </div>
+</div>
+
+<div class="modal" id="colorModal" hidden>
+  <div class="sheet">
+    <div class="grab"></div>
+    <div class="head"><span class="cap" id="colorCap">색상 고르기</span><button class="link" id="colorClear">색상 비우기</button></div>
+    <input type="text" id="colorSearch" placeholder="색 이름이나 번호로 찾기">
+    <div class="cgrid" id="colorGrid"></div>
+    <button class="ghost" id="closeColor">닫기</button>
+  </div>
+</div>
+
+<div class="modal" id="saleModal" hidden>
+  <div class="sheet">
+    <div class="grab"></div>
+    <div class="head"><span class="cap">판매 등록</span></div>
+
+    <div class="row" style="align-items:flex-end;gap:10px">
+      <div style="flex:1">
+        <div style="font-size:12px;color:var(--sub);margin-bottom:6px">판매일</div>
+        <input type="date" id="sDate" style="width:100%;border:1px solid var(--line);background:#FBFAFD;border-radius:12px;padding:11px;font-size:15px;font-weight:600;color:var(--ink)">
+      </div>
+      <div>
+        <div style="font-size:12px;color:var(--sub);margin-bottom:6px">수량</div>
+        <div class="row" style="gap:6px">
+          <button class="stepbtn" id="sMinus" style="width:48px;height:44px;font-size:18px">−</button>
+          <div class="cntbox" id="sQty" style="min-width:66px;padding:11px 6px;font-size:15px">1개</div>
+          <button class="stepbtn" id="sPlus" style="width:48px;height:44px;font-size:18px">+</button>
+        </div>
+      </div>
+    </div>
+
+    <div style="font-size:12px;color:var(--sub);margin:14px 0 6px">받은 금액</div>
+    <div class="unitwrap"><input class="num" type="text" inputmode="decimal" id="sAmount"><span class="suf">원</span></div>
+
+    <div style="font-size:12px;color:var(--sub);margin:14px 0 6px">손님 (비워도 돼요)</div>
+    <input type="text" id="sCustomer" placeholder="이름">
+    <div class="sorts" id="sCustomers" style="margin-top:8px"></div>
+
+    <div style="font-size:12px;color:var(--sub);margin:6px 0 6px">판매처</div>
+    <div class="sorts" id="sChannels"></div>
+
+    <div style="font-size:12px;color:var(--sub);margin:6px 0 6px">상태</div>
+    <div class="sorts" id="sStatus"></div>
+
+    <div style="font-size:12px;color:var(--sub);margin:6px 0 6px">메모</div>
+    <input type="text" id="sMemo" placeholder="예: 선물 포장 요청">
+
+    <button class="primary" id="saveSale">저장</button>
+    <button class="ghost" id="closeSale">닫기</button>
+  </div>
+</div>
 
 <div class="modal" id="shareModal" hidden>
   <div class="sheet">
@@ -264,6 +410,7 @@
     </div>
     <img id="cardPrev" alt="공유 카드 미리보기">
     <div id="textPrev" hidden></div>
+    <label class="check"><input type="checkbox" id="incMat" checked> 사용한 재료도 함께 넣기</label>
     <label class="check"><input type="checkbox" id="incCost"> 원가·이익도 함께 넣기</label>
     <button class="primary" id="doShare">공유하기</button>
     <button class="ghost" id="closeShare">닫기</button>
@@ -290,11 +437,77 @@ let lib = [
 let works = [];
 let curId = null;
 /* 첫 화면 메뉴: 이름과 순서를 직접 바꿀 수 있습니다 */
-let menu = [{key:'lib', label:'재료 목록'}, {key:'works', label:'원가계산표'}];
+let menu = [{key:'lib', label:'재료 목록'}, {key:'works', label:'원가계산표'}, {key:'sales', label:'판매 기록'}];
+let sales = [];
+let libSort = 'mine', saleSort = 'new';
+let saleMonth = null;  /* 'YYYY-MM' 또는 null(전체) */
+const CHANNELS = ['인스타','당근','지인','플리마켓','기타'];
+
+/* 왁스실 색상표 (디어드리머) */
+const FLAT40 = [
+ [1,'흰색','#ECECEF'],[2,'진주','#E0D6CE'],[3,'베이지','#DFB89D'],[4,'크림색','#F2C690'],
+ [5,'카라멜','#C9936C'],[6,'갈색','#A5674C'],[7,'고동색','#673631'],[8,'귤색','#F09A52'],
+ [9,'노랑색','#F2AE3D'],[10,'망고','#F4D042'],[11,'당근','#F14937'],[12,'트로피컬','linear-gradient(135deg,#E4432F,#F2C233,#3E9B57,#3B6FB5)'],
+ [13,'벚꽃','#E7C1C2'],[14,'라일락','#CA9CBB'],[15,'플라밍고','#D26E81'],[16,'분홍','#EFA3C3'],
+ [17,'분홍다홍','#EB9086'],[18,'진분홍','#EE5B8D'],[19,'빨강','#D11A27'],[20,'토마토','#A43029'],
+ [21,'와인','#992431'],[22,'연보라','#9E89BC'],[23,'진보라','#644390'],[24,'자주색','#813B60'],
+ [25,'밝은연두','#C4E062'],[26,'에메랄드','#A1DDBF'],[27,'옥색','#92B5A8'],[28,'초록색','#399B66'],
+ [29,'풀색','#627A57'],[30,'진초록','#3E534C'],[31,'카키색','#858161'],[32,'밝은청록','#27A3AD'],
+ [33,'민트','#AFDCD8'],[34,'파스텔블루','#B6C8DC'],[35,'하늘','#5AB9D9'],[36,'밝은파랑','#7297D0'],
+ [37,'코발트블루','#407188'],[38,'연한회색','#AFADA1'],[39,'진한회색','#827C7E'],[40,'검정색','#474546']
+];
+const ROUND_NOS = [2,4,6,8,9,10,13,14,15,19,21,22,23,27,29,32,34,36,37,40];
+const MIX6 = [
+ [1,'머메이드','linear-gradient(135deg,#B9C9EA,#CBA8D8,#9FD3E8)'],
+ [2,'마카롱','linear-gradient(135deg,#F3B8D2,#A9DCD4,#C6B3E0)'],
+ [3,'레모네이드','linear-gradient(135deg,#CDE49C,#7FCBDD,#EFE79B)'],
+ [4,'별조각','linear-gradient(135deg,#EBB6CE,#ABA0C4,#D9C7DE)'],
+ [5,'핑크 미스트','linear-gradient(135deg,#E8637C,#BDB6B2,#F0A7B4)'],
+ [6,'선샤인 레인보우','linear-gradient(135deg,#F2836F,#F4C96B,#F09BAE)']
+];
+const PALETTES = [
+  ['none','색상표 없음'],
+  ['flat40','0.8 플랫왁스실 (40색)'],
+  ['round20','0.45 · 0.65 라운드실 (20색)'],
+  ['mix6','0.5 믹스실 (6색)']
+];
+/* 실 굵기 숫자로 종류를 정합니다: 0.8 플랫 / 0.5 믹스 / 0.45·0.65 라운드 */
+const BY_SIZE = {'0.8':'flat40', '0.5':'mix6', '0.45':'round20', '0.65':'round20'};
+function guessPalette(name){
+  const t = String(name||'');
+  const hit = t.match(/(\d*\.\d+)/);
+  if(hit){
+    const key = String(parseFloat(hit[1]));
+    if(BY_SIZE[key]) return BY_SIZE[key];
+  }
+  if(/플랫/.test(t)) return 'flat40';
+  if(/라운드/.test(t)) return 'round20';
+  if(/믹스/.test(t)) return 'mix6';
+  return 'none';
+}
+/* 추측한 값은 한 번만 쓰고 그대로 저장 — 이후에는 고른 값이 유지됩니다 */
+function normalizeLib(){
+  let touched = false;
+  lib.forEach(l=>{ if(!l.palette){ l.palette = guessPalette(l.name); touched = true; } });
+  if(touched) queueSave();
+}
+function paletteOf(kind){
+  if(kind==='flat40') return FLAT40.map(c=>({no:c[0], name:c[1], css:c[2]}));
+  if(kind==='round20') return FLAT40.filter(c=>ROUND_NOS.indexOf(c[0])>=0).map(c=>({no:c[0], name:c[1], css:c[2]}));
+  if(kind==='mix6') return MIX6.map(c=>({no:c[0], name:c[1], css:c[2]}));
+  return [];
+}
+const colorCss = (kind, memo) => {
+  const hit = paletteOf(kind).find(c=>(c.no+'. '+c.name)===memo || c.name===memo);
+  return hit ? hit.css : '';
+};
+const DEFMENU = {lib:'재료 목록', works:'원가계산표', sales:'판매 기록'};
 let homeEdit = false;
+let sortBy = 'recent';
 const ICON = {
   lib:'<svg width="22" height="22" viewBox="0 0 24 24" fill="none"><rect x="6" y="3.5" width="12" height="17" rx="2" stroke="#6C5B8C" stroke-width="1.6"/><path d="M6 8h12M6 16h12" stroke="#6C5B8C" stroke-width="1.6"/></svg>',
-  works:'<svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M4 9c4-4 12-4 16 0M4 15c4 4 12 4 16 0" stroke="#6C5B8C" stroke-width="1.6" stroke-linecap="round"/><circle cx="12" cy="12" r="2.4" stroke="#6C5B8C" stroke-width="1.6"/></svg>'
+  works:'<svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M9.2 15.6c-2.3 0-4.2-1.6-4.2-3.6S6.9 8.4 9.2 8.4c2.7 0 4 2.2 6.2 2.2" stroke="#6C5B8C" stroke-width="1.7" stroke-linecap="round"/><path d="M14.8 8.4c2.3 0 4.2 1.6 4.2 3.6s-1.9 3.6-4.2 3.6c-2.7 0-4-2.2-6.2-2.2" stroke="#6C5B8C" stroke-width="1.7" stroke-linecap="round"/><path d="M3 12h2M19 12h2" stroke="#6C5B8C" stroke-width="1.7" stroke-linecap="round"/></svg>',
+  sales:'<svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M5 4.5h11l3.5 3.6V19a.9.9 0 0 1-.9.9H5a.9.9 0 0 1-.9-.9V5.4A.9.9 0 0 1 5 4.5Z" stroke="#6C5B8C" stroke-width="1.6" stroke-linejoin="round"/><path d="M8 11h8M8 15h5" stroke="#6C5B8C" stroke-width="1.6" stroke-linecap="round"/></svg>'
 };
 const labelOf = k => { const m = menu.find(x=>x.key===k); return m ? m.label : ''; };
 
@@ -303,7 +516,7 @@ const blank = () => ({
   materials:[{id:uid(), libId:lib[0]?lib[0].id:'', memo:'', name:'', unit:'m', buyCost:'', buyQty:'', used:''}],
   useLabor:true, labors:[{id:uid(), name:'매듭 작업', minutes:'', wage:''}],
   etc:[{id:uid(),name:'포장재',amount:''}],
-  margin:'40', fee:'', feeInPrice:true, roundUnit:'100'
+  margin:'40', fee:'', feeInPrice:true, roundUnit:'100', count:'1'
 });
 const cur = () => works.find(w=>w.id===curId);
 let S = blank();
@@ -317,7 +530,7 @@ function resolved(m){
 
 /* ── 저장 ── */
 async function save(){
-  const payload = JSON.stringify({works, lib, menu});
+  const payload = JSON.stringify({works, lib, menu, sortBy, sales, libSort, saleSort});
   try { localStorage.setItem(KEY, payload); return; } catch(e){}
   try { await window.storage.set(KEY, payload); } catch(e){}
 }
@@ -341,6 +554,7 @@ function show(view){
   $('viewWorks').hidden = view !== 'works';
   $('viewWork').hidden  = view !== 'work';
   $('viewLib').hidden   = view !== 'lib';
+  $('viewSales').hidden = view !== 'sales';
   window.scrollTo(0,0);
 }
 function openHome(){ curId = null; renderHome(); show('home'); }
@@ -349,20 +563,30 @@ function openWork(id){
   curId = id; S = cur().data;
   $('title').value = S.title || '';
   $('fee').value = S.fee || '';
+  if(!S.count) S.count = '1';
+  $('cntVal').textContent = n(S.count) + '개';
   $('pick').hidden = true;
-  renderPhotos(); renderMats(); renderLabors(); renderEtc(); renderSettings(); calc();
+  renderPhotos(); renderMats(); renderLabors(); renderEtc(); renderSettings(); calc(); saleSummary();
   show('work');
 }
 function openLib(){ renderLib(); show('lib'); }
+function openSales(){
+  if(saleMonth === undefined) saleMonth = null;
+  if(saleMonth === null && sales.length === 0) saleMonth = ym(new Date());
+  renderSales(); show('sales');
+}
 $('goLib2').addEventListener('click', openLib);
 $('backHome0').addEventListener('click', openHome);
 $('backWorks').addEventListener('click', openWorks);
 $('backHome2').addEventListener('click', openHome);
+$('backHome3').addEventListener('click', openHome);
 
 /* ── 홈 ── */
 function renderHome(){
   $('menu').innerHTML = menu.map((m,i)=>{
-    const sub = m.key==='lib' ? '등록된 재료 '+lib.length+'개' : '기록한 작품 '+works.length+'개';
+    const sub = m.key==='lib' ? '등록된 재료 '+lib.length+'개'
+              : m.key==='sales' ? '이번 달 '+monthSales(ym(new Date())).length+'건'
+              : '기록한 작품 '+works.length+'개';
     if(homeEdit){
       return '<div class="tile" data-i="'+i+'">' +
         '<span class="spool">'+ICON[m.key]+'</span>' +
@@ -377,6 +601,9 @@ function renderHome(){
       '<span class="arrow">\u203a</span></button>';
   }).join('');
   $('btnEditMenu').textContent = homeEdit ? '완료' : '이름\u00b7순서 편집';
+  $('salesTitle').textContent = labelOf('sales');
+  $('btnExportLib').textContent = labelOf('lib') + '만 내보내기';
+  $('btnExportWorks').textContent = labelOf('works') + '만 내보내기';
   syncLabels();
   $('workCount').textContent = works.length ? works.length + '개' : '';
 }
@@ -395,20 +622,34 @@ $('menu').addEventListener('click', e=>{
     return;
   }
   const b = e.target.closest('[data-key]'); if(!b) return;
-  if(b.dataset.key==='lib') openLib(); else openWorks();
+  if(b.dataset.key==='lib') openLib();
+  else if(b.dataset.key==='sales') openSales();
+  else openWorks();
 });
 $('menu').addEventListener('input', e=>{
   const edit = e.target.closest('[data-i]'); if(!edit) return;
   menu[+edit.dataset.i].label = e.target.value;
   syncLabels(); queueSave();
 });
+const SORTS = [['mine','내 순서'],['recent','최근순'],['name','이름순'],['price','판매가순']];
+function sortedWorks(){
+  const a = works.slice();
+  if(sortBy==='mine') return a;
+  if(sortBy==='name') a.sort((x,y)=>((x.data.title||'힣')).localeCompare((y.data.title||'힣'),'ko'));
+  else if(sortBy==='price') a.sort((x,y)=>(y.price||0)-(x.price||0));
+  else a.sort((x,y)=>(y.updated||0)-(x.updated||0));
+  return a;
+}
 function renderWorks(){
   const box = $('works');
+  $('sorts').innerHTML = works.length
+    ? SORTS.map(([k,l])=>'<button class="chip'+(sortBy===k?' on':'')+'" data-s="'+k+'">'+l+'</button>').join('')
+    : '';
   if(!works.length){
     box.innerHTML = '<div class="hint" style="margin:0 0 4px">아직 만든 작품이 없어요. 아래에서 새 작품을 시작하세요.</div>';
     return;
   }
-  box.innerHTML = works.map(w=>{
+  box.innerHTML = sortedWorks().map((w,i)=>{
     const shots = (w.data.photos)||[];
     const t = shots[0];
     const name = (w.data.title||'').trim() || '이름 없는 작품';
@@ -418,12 +659,27 @@ function renderWorks(){
       (shots.length>1 ? '<b>'+shots.length+'</b>' : '') +
       '</span><span><span class="name">'+esc(name)+'</span><br>' +
       '<span class="meta">판매가 '+won(w.price||0)+'원 · 원가 '+won(w.cost||0)+'원</span></span></button>' +
+      (sortBy==='mine'
+        ? '<button class="ord" data-up'+(i===0?' style="opacity:.25"':'')+'>↑</button>' +
+          '<button class="ord" data-down'+(i===works.length-1?' style="opacity:.25"':'')+'>↓</button>'
+        : '') +
       '<button class="x" data-x>×</button></div>';
   }).join('');
 }
+$('sorts').addEventListener('click', e=>{
+  const b = e.target.closest('[data-s]'); if(!b) return;
+  sortBy = b.dataset.s; renderWorks(); queueSave();
+});
 $('works').addEventListener('click', e=>{
   const row = e.target.closest('.work'); if(!row) return;
   const w = works.find(x=>x.id===row.dataset.id); if(!w) return;
+  if(e.target.closest('[data-up]') || e.target.closest('[data-down]')){
+    const i = works.indexOf(w);
+    const j = e.target.closest('[data-up]') ? i-1 : i+1;
+    if(j<0 || j>=works.length) return;
+    const t = works[i]; works[i] = works[j]; works[j] = t;
+    renderWorks(); queueSave(); return;
+  }
   if(e.target.closest('[data-x]')){
     works = works.filter(x=>x.id!==w.id);
     renderWorks(); renderHome(); queueSave(); return;
@@ -431,7 +687,7 @@ $('works').addEventListener('click', e=>{
   openWork(w.id);
 });
 $('btnNew').addEventListener('click', ()=>{
-  const w = {id:uid(), data:blank(), price:0, cost:0};
+  const w = {id:uid(), data:blank(), price:0, cost:0, updated:Date.now()};
   works.unshift(w); queueSave(); openWork(w.id);
 });
 $('delWork').addEventListener('click', ()=>{
@@ -440,37 +696,123 @@ $('delWork').addEventListener('click', ()=>{
 });
 
 /* ── 재료 목록 ── */
-function renderLib(){
-  const box = $('libs');
-  if(!lib.length){ box.innerHTML = '<div class="hint" style="margin:0">아직 등록한 재료가 없어요. "+ 재료 등록"을 눌러 넣어보세요.</div>'; return; }
-  box.innerHTML = lib.map(l =>
-    '<div class="libitem" data-id="'+l.id+'">' +
+const LIB_SORTS = [['mine','내 순서'],['name','이름순'],['unit','단가순']];
+function libView(){
+  const a = lib.map((l,i)=>({l:l, i:i}));
+  if(libSort==='name') a.sort((x,y)=>(x.l.name||'힣').localeCompare(y.l.name||'힣','ko'));
+  else if(libSort==='unit') a.sort((x,y)=>{
+    const ux = n(x.l.qty)>0 ? n(x.l.cost)/n(x.l.qty) : 0;
+    const uy = n(y.l.qty)>0 ? n(y.l.cost)/n(y.l.qty) : 0;
+    return uy-ux;
+  });
+  return a;
+}
+let libOpen = null;
+let libClosed = {};
+function libRow(l, i, canMove){
+  const unitPrice = n(l.qty)>0 ? esc(l.unit)+'당 '+perUnit(n(l.cost)/n(l.qty))+'원' : '단가 미입력';
+  const open = libOpen === l.id;
+  let h = '<div class="libitem" data-id="'+l.id+'">' +
+    '<div class="libhead">' +
+      '<span class="lname">'+(esc(l.name) || '이름 없음')+'</span>' +
+      '<span class="lunit">'+unitPrice+'</span>' +
+      (canMove
+        ? '<button class="ord" data-up'+(i===0?' style="opacity:.25"':'')+'>↑</button>' +
+          '<button class="ord" data-down'+(i===lib.length-1?' style="opacity:.25"':'')+'>↓</button>'
+        : '') +
+      '<span class="caret">'+(open?'▲':'▼')+'</span>' +
+    '</div>';
+  if(open){
+    h += '<div class="libbody">' +
       '<div class="row" style="margin-bottom:8px">' +
         '<input type="text" data-f="name" placeholder="재료 이름" value="'+esc(l.name)+'">' +
-        '<button class="x" data-x>×</button>' +
       '</div>' +
-      '<div class="row">' +
+      '<div class="row" style="margin-bottom:8px">' +
         '<div class="unitwrap"><input class="num" type="text" inputmode="decimal" data-f="cost" placeholder="8500" value="'+esc(l.cost)+'"><span class="suf">원</span></div>' +
         '<span style="color:var(--sub);font-size:13px">에</span>' +
         '<div class="unitwrap"><input class="num" type="text" inputmode="decimal" data-f="qty" placeholder="250" value="'+esc(l.qty)+'"><span class="suf">'+esc(l.unit)+'</span></div>' +
         '<select data-f="unit">'+UNITS.map(u=>'<option'+(u===l.unit?' selected':'')+'>'+u+'</option>').join('')+'</select>' +
       '</div>' +
-      '<div class="each" style="margin-top:6px">'+(n(l.qty)>0 ? esc(l.unit)+'당 '+perUnit(n(l.cost)/n(l.qty))+'원' : '')+'</div>' +
-    '</div>'
-  ).join('');
+      '<div class="row" style="margin-bottom:10px">' +
+        '<span style="font-size:12px;color:var(--sub);flex:0 0 auto">색상표</span>' +
+        '<select data-f="palette" style="flex:1">' +
+          PALETTES.map(([k,lb])=>'<option value="'+k+'"'+((l.palette||'none')===k?' selected':'')+'>'+lb+'</option>').join('') +
+        '</select>' +
+      '</div>' +
+      '<button class="ghost" data-x style="margin:0;padding:9px;font-size:12.5px;color:var(--rose)">이 재료 삭제</button>' +
+    '</div>';
+  }
+  return h + '</div>';
 }
+function renderLib(){
+  const box = $('libs');
+  $('libSorts').innerHTML = lib.length
+    ? LIB_SORTS.map(([k,l])=>'<button class="chip'+(libSort===k?' on':'')+'" data-ls="'+k+'">'+l+'</button>').join('')
+    : '';
+  if(!lib.length){ box.innerHTML = '<div class="hint" style="margin:0">아직 등록한 재료가 없어요. "+ 재료 등록"을 눌러 넣어보세요.</div>'; return; }
+
+  const q = ($('libSearch').value||'').trim();
+  const rows = libView().filter(({l})=> !q || (l.name||'').indexOf(q)>=0);
+  if(!rows.length){ box.innerHTML = '<div class="hint" style="margin:0">찾는 재료가 없어요.</div>'; return; }
+
+  const canMove = libSort==='mine' && !q;
+  /* 이름에 '실' 또는 '끈'이 들어가면 실 그룹 */
+  const isThread = l => /실|끈/.test(l.name||'');
+  const groups = [
+    ['thread','실·끈', rows.filter(({l})=>isThread(l))],
+    ['other','부자재·기타', rows.filter(({l})=>!isThread(l))]
+  ].filter(g=>g[2].length);
+
+  box.innerHTML = groups.map(([key,label,items])=>{
+    const closed = !!libClosed[key];
+    return '<div class="gbar" data-g="'+key+'"><span>'+label+'  '+items.length+'</span><span class="caret">'+(closed?'▼':'▲')+'</span></div>' +
+      (closed ? '' : items.map(({l,i})=>libRow(l,i,canMove)).join(''));
+  }).join('');
+}
+$('libSearch').addEventListener('input', renderLib);
 function libChanged(e){
   const el = e.target.closest('.libitem'); if(!el) return;
   const l = libOf(el.dataset.id); const f = e.target.dataset.f;
   if(!l||!f) return;
   l[f] = e.target.value;
-  el.querySelector('.each').textContent = n(l.qty)>0 ? l.unit+'당 '+perUnit(n(l.cost)/n(l.qty))+'원' : '';
-  el.querySelectorAll('.suf')[1].textContent = l.unit;
+  const hd = el.querySelector('.lname');
+  if(hd) hd.textContent = l.name || '이름 없음';
+  const up = el.querySelector('.lunit');
+  if(up) up.textContent = n(l.qty)>0 ? l.unit+'당 '+perUnit(n(l.cost)/n(l.qty))+'원' : '단가 미입력';
+  const sufs = el.querySelectorAll('.suf');
+  if(sufs[1]) sufs[1].textContent = l.unit;
+  if(f==='name' && !l.paletteSet){
+    l.palette = guessPalette(l.name);
+    const sel = el.querySelector('[data-f="palette"]');
+    if(sel) sel.value = l.palette;
+  }
+  if(f==='palette') l.paletteSet = true;
+  if(f==='name' || f==='unit' || f==='palette') renderMats();
   queueSave();
 }
 $('libs').addEventListener('input', libChanged);
 $('libs').addEventListener('change', libChanged);
+$('libSorts').addEventListener('click', e=>{
+  const b = e.target.closest('[data-ls]'); if(!b) return;
+  libSort = b.dataset.ls; renderLib(); queueSave();
+});
 $('libs').addEventListener('click', e=>{
+  const g = e.target.closest('[data-g]');
+  if(g){ libClosed[g.dataset.g] = !libClosed[g.dataset.g]; renderLib(); return; }
+  const headEl = e.target.closest('.libhead');
+  if(headEl && !e.target.closest('[data-up]') && !e.target.closest('[data-down]')){
+    const id = headEl.closest('.libitem').dataset.id;
+    libOpen = (libOpen===id) ? null : id;
+    renderLib(); return;
+  }
+  const el0 = e.target.closest('.libitem');
+  if(el0 && (e.target.closest('[data-up]') || e.target.closest('[data-down]'))){
+    const i = lib.findIndex(x=>x.id===el0.dataset.id);
+    const j = e.target.closest('[data-up]') ? i-1 : i+1;
+    if(j<0 || j>=lib.length) return;
+    const t = lib[i]; lib[i] = lib[j]; lib[j] = t;
+    renderLib(); renderMats(); queueSave(); return;
+  }
   if(!e.target.closest('[data-x]')) return;
   const el = e.target.closest('.libitem');
   const l = libOf(el.dataset.id);
@@ -478,11 +820,13 @@ $('libs').addEventListener('click', e=>{
     if(m.libId===l.id){ m.libId=''; m.name=l.name; m.unit=l.unit; m.buyCost=l.cost; m.buyQty=l.qty; }
   }));
   lib = lib.filter(x=>x.id!==l.id);
-  renderLib(); queueSave();
+  if(libOpen===l.id) libOpen = null;
+  renderLib(); renderMats(); queueSave();
 });
 $('btnLibAdd').addEventListener('click', ()=>{
-  lib.push({id:uid(), name:'', unit:'m', cost:'', qty:''});
-  renderLib(); queueSave();
+  const item = {id:uid(), name:'', unit:'m', cost:'', qty:'', palette:'none'};
+  lib.push(item); libOpen = item.id; $('libSearch').value = '';
+  renderLib(); renderMats(); queueSave();
 });
 
 /* ── 재료비 ── */
@@ -491,7 +835,11 @@ function renderMats(){
   S.materials.forEach(m=>{
     const r = resolved(m);
     const picked = !!libOf(m.libId);
-    const memoPh = /실/.test(r.name||'') ? '색상 (선택) 예: 라벤더' : '비고 (선택)';
+    const lrec = libOf(m.libId);
+    const pal = lrec ? (lrec.palette || 'none') : 'none';
+    const css = colorCss(pal, m.memo);
+    const memoPh = pal!=='none' ? '왼쪽 동그라미를 눌러 색상 고르기'
+                 : (/실/.test(r.name||'') ? '색상 (선택)' : '비고 (선택)');
     const el = document.createElement('div');
     el.className = 'mat'; el.dataset.id = m.id;
     let html =
@@ -503,6 +851,9 @@ function renderMats(){
         '<button class="x" data-x>×</button>' +
       '</div>' +
       '<div class="row" style="margin-bottom:8px">' +
+        (pal!=='none'
+          ? '<button class="swatch" data-pick style="'+(css ? 'background:'+css : '')+'"></button>'
+          : '') +
         '<input class="memo" type="text" data-f="memo" placeholder="'+memoPh+'" value="'+esc(m.memo)+'">' +
       '</div>';
     if(picked){
@@ -744,6 +1095,13 @@ function calc(){
   const feeAmt = price*fr, net = price-feeAmt, profit = net-cost;
 
   cur().price = price; cur().cost = Math.round(cost);
+  cur().updated = Date.now();
+
+  const cnt = Math.max(1, n(S.count)||1);
+  $('cntTotals').innerHTML =
+    '<div class="trow"><span>총 판매가</span><b style="color:var(--violet)">'+won(price*cnt)+'원</b></div>' +
+    '<div class="trow"><span>총 재료비</span><b style="color:var(--teal)">'+won(material*cnt)+'원</b></div>' +
+    '<div class="trow"><span>총 남는 이익</span><b style="color:var(--mint)">'+won(Math.max(profit,0)*cnt)+'원</b></div>';
 
   $('matTotal').textContent = won(material)+'원';
   $('laborSum').textContent = won(labor)+'원';
@@ -764,6 +1122,262 @@ function calc(){
   $('legend').innerHTML = bands.map(b=>'<div><span class="dot" style="background:'+b[2]+'"></span>'+b[0]+'<b>'+won(b[1])+'</b></div>').join('');
 }
 
+/* ── 사진 크게 보기 ── */
+let photoIdx = 0;
+function showPhoto(i){
+  if(!S.photos.length){ $('photoModal').hidden = true; return; }
+  photoIdx = (i + S.photos.length) % S.photos.length;
+  $('photoBig').src = S.photos[photoIdx];
+  $('photoBig').classList.remove('zoom');
+  $('pCount').textContent = (photoIdx+1) + ' / ' + S.photos.length;
+  $('pRep').style.opacity = photoIdx===0 ? .4 : 1;
+}
+$('shots').addEventListener('click', e=>{
+  if(e.target.tagName !== 'IMG') return;
+  const box = e.target.closest('.shot');
+  const idx = Array.prototype.indexOf.call($('shots').children, box);
+  if(idx < 0) return;
+  showPhoto(idx);
+  $('photoModal').hidden = false;
+});
+$('photoBig').addEventListener('click', e=>{ e.target.classList.toggle('zoom'); });
+$('pPrev').addEventListener('click', ()=>showPhoto(photoIdx-1));
+$('pNext').addEventListener('click', ()=>showPhoto(photoIdx+1));
+$('pClose').addEventListener('click', ()=>{ $('photoModal').hidden = true; });
+$('photoModal').addEventListener('click', e=>{ if(e.target.id==='photoModal') $('photoModal').hidden = true; });
+$('pRep').addEventListener('click', ()=>{
+  if(photoIdx===0) return;
+  S.photos = [S.photos[photoIdx]].concat(S.photos.filter((_,k)=>k!==photoIdx));
+  renderPhotos(); queueSave(); showPhoto(0); flash('대표 사진으로 바꿨어요');
+});
+$('pDel').addEventListener('click', ()=>{
+  S.photos.splice(photoIdx,1);
+  renderPhotos(); queueSave();
+  if(!S.photos.length){ $('photoModal').hidden = true; return; }
+  showPhoto(photoIdx);
+});
+
+/* ── 색상 고르기 ── */
+let colorTarget = null;
+function renderColorGrid(){
+  if(!colorTarget) return;
+  const m = S.materials.find(x=>x.id===colorTarget);
+  const l = libOf(m.libId);
+  const kind = l ? (l.palette || 'none') : 'none';
+  const q = $('colorSearch').value.trim();
+  const list = paletteOf(kind).filter(c=> !q || c.name.indexOf(q)>=0 || String(c.no)===q.replace(/^0+/,''));
+  $('colorCap').textContent = (l ? l.name : '색상') + ' 색상 고르기';
+  $('colorGrid').innerHTML = list.map(c=>{
+    const label = c.no+'. '+c.name;
+    return '<button class="cbtn'+(m.memo===label?' on':'')+'" data-color="'+esc(label)+'">' +
+      '<span class="cdot" style="background:'+c.css+'"></span>' +
+      '<span>'+esc(label)+'</span></button>';
+  }).join('') || '<div class="hint" style="grid-column:1/-1;margin:0">찾는 색이 없어요. 칸에 직접 적어도 됩니다.</div>';
+}
+$('mats').addEventListener('click', e=>{
+  const b = e.target.closest('[data-pick]'); if(!b) return;
+  colorTarget = e.target.closest('.mat').dataset.id;
+  $('colorSearch').value = '';
+  renderColorGrid();
+  $('colorModal').hidden = false;
+});
+$('colorSearch').addEventListener('input', renderColorGrid);
+$('colorGrid').addEventListener('click', e=>{
+  const b = e.target.closest('[data-color]'); if(!b) return;
+  const m = S.materials.find(x=>x.id===colorTarget);
+  m.memo = b.dataset.color;
+  $('colorModal').hidden = true;
+  renderMats(); calc(); queueSave();
+});
+$('colorClear').addEventListener('click', ()=>{
+  const m = S.materials.find(x=>x.id===colorTarget);
+  if(m) m.memo = '';
+  $('colorModal').hidden = true;
+  renderMats(); calc(); queueSave();
+});
+$('closeColor').addEventListener('click', ()=>{ $('colorModal').hidden = true; });
+$('colorModal').addEventListener('click', e=>{ if(e.target.id==='colorModal') $('colorModal').hidden = true; });
+
+/* ── 판매 기록 ── */
+const pad2 = v => String(v).padStart(2,'0');
+const ym = d => d.getFullYear()+'-'+pad2(d.getMonth()+1);
+const monthSales = m => sales.filter(x=>(x.date||'').slice(0,7)===m);
+const saleProfit = x => (n(x.amount) - n(x.cost)*n(x.qty||1));
+function customers(){
+  const seen = [];
+  sales.slice().reverse().forEach(x=>{ if(x.customer && seen.indexOf(x.customer)<0) seen.push(x.customer); });
+  return seen.slice(0,6);
+}
+function monthsWithData(){
+  const set = [];
+  sales.forEach(x=>{ const m=(x.date||'').slice(0,7); if(m && set.indexOf(m)<0) set.push(m); });
+  return set.sort().reverse();
+}
+const monthLabel = m => m ? (m.slice(0,4)+'년 '+Number(m.slice(5,7))+'월') : '전체 기간';
+
+const SALE_SORTS = [['new','최신순'],['old','오래된순'],['amount','금액순']];
+function renderSales(){
+  $('mNow').textContent = monthLabel(saleMonth);
+  const list = (saleMonth ? monthSales(saleMonth) : sales.slice());
+  if(saleSort==='old') list.sort((a,b)=>(a.date||'').localeCompare(b.date||''));
+  else if(saleSort==='amount') list.sort((a,b)=>n(b.amount)-n(a.amount));
+  else list.sort((a,b)=>(b.date||'').localeCompare(a.date||''));
+
+  const qty = list.reduce((a,b)=>a+n(b.qty||1),0);
+  const amount = list.reduce((a,b)=>a+n(b.amount),0);
+  const profit = list.reduce((a,b)=>a+saleProfit(b),0);
+  $('saleStats').innerHTML =
+    '<div><small>판매</small><span>'+list.length+'건 · '+qty+'개</span></div>' +
+    '<div><small>매출</small><span>'+won(amount)+'원</span></div>' +
+    '<div><small>남는 이익</small><span>'+won(profit)+'원</span></div>';
+  $('saleCount').textContent = list.length ? list.length+'건' : '';
+  $('saleSorts').innerHTML = list.length
+    ? SALE_SORTS.map(([k,l])=>'<button class="chip'+(saleSort===k?' on':'')+'" data-ss="'+k+'">'+l+'</button>').join('')
+    : '';
+
+  if(!list.length){
+    $('salesList').innerHTML = '<div class="hint" style="margin:0">이 기간에는 기록이 없어요. 작품 상세에서 <b>판매 등록</b>을 누르면 여기에 쌓입니다.</div>';
+    return;
+  }
+  $('salesList').innerHTML = list.map(x=>{
+    const w = works.find(v=>v.id===x.workId);
+    const t = w && w.data.photos && w.data.photos[0];
+    const who = [x.customer, x.channel].filter(Boolean).join(' · ');
+    const st = x.status==='making' ? '<span class="badge b-making">제작중</span>' : '<span class="badge b-done">발송완료</span>';
+    return '<div class="sale" data-id="'+x.id+'">' +
+      '<div class="row" style="align-items:flex-start">' +
+        '<span style="font-size:12px;color:var(--sub);width:44px;flex:0 0 auto">'+(x.date||'').slice(5).replace('-','/')+'</span>' +
+        '<span class="thumb" style="width:44px;height:44px;border-radius:12px">' +
+          (t ? '<img src="'+t+'" alt="">' : '') + '</span>' +
+        '<span style="flex:1;min-width:0">' +
+          '<span style="font-size:14px;font-weight:700">'+esc(x.name)+' ×'+n(x.qty||1)+'</span><br>' +
+          '<span style="font-size:11.5px;color:var(--sub)">'+esc(who || (x.memo||''))+'</span>' +
+        '</span>' +
+        '<span style="text-align:right">' +
+          '<span style="font-size:14px;font-weight:800;color:var(--violet)">'+won(n(x.amount))+'원</span><br>'+st +
+        '</span>' +
+        '<button class="x" data-x>×</button>' +
+      '</div></div>';
+  }).join('');
+}
+function shiftMonth(step){
+  const base = saleMonth || ym(new Date());
+  const d = new Date(Number(base.slice(0,4)), Number(base.slice(5,7))-1+step, 1);
+  saleMonth = ym(d); renderSales(); 
+}
+$('mPrev').addEventListener('click', ()=>shiftMonth(-1));
+$('mNext').addEventListener('click', ()=>shiftMonth(1));
+$('mNow').addEventListener('click', ()=>{
+  const ms = monthsWithData();
+  const pick = prompt('보고 싶은 년·월을 넣으세요 (예: 2026-07)\n전체를 보려면 "전체"라고 쓰세요.' +
+                      (ms.length ? '\n\n기록이 있는 달: '+ms.join(', ') : ''), saleMonth || '전체');
+  if(pick===null) return;
+  const v = pick.trim();
+  if(v==='전체' || v===''){ saleMonth = null; }
+  else if(/^\d{4}-\d{1,2}$/.test(v)){ saleMonth = v.slice(0,4)+'-'+pad2(Number(v.slice(5))); }
+  else return flash('2026-07 처럼 넣어주세요');
+  renderSales();
+});
+$('saleSorts').addEventListener('click', e=>{
+  const b = e.target.closest('[data-ss]'); if(!b) return;
+  saleSort = b.dataset.ss; renderSales(); queueSave();
+});
+$('salesList').addEventListener('click', e=>{
+  const row = e.target.closest('.sale'); if(!row) return;
+  if(!e.target.closest('[data-x]')) return;
+  sales = sales.filter(x=>x.id!==row.dataset.id);
+  renderSales(); renderHome(); queueSave();
+});
+
+/* 판매 등록 팝업 */
+let saleDraft = null;
+function saleChips(){
+  $('sCustomers').innerHTML = customers().map(c=>'<button class="chip" data-c="'+esc(c)+'">'+esc(c)+'</button>').join('');
+  $('sChannels').innerHTML = CHANNELS.map(c=>'<button class="chip'+(saleDraft.channel===c?' on':'')+'" data-ch="'+c+'">'+c+'</button>').join('');
+  $('sStatus').innerHTML = [['making','제작중'],['done','발송완료']]
+    .map(([k,l])=>'<button class="chip'+(saleDraft.status===k?' on':'')+'" data-st="'+k+'">'+l+'</button>').join('');
+}
+function openSaleForm(){
+  const w = cur();
+  const d = new Date();
+  saleDraft = {qty:1, status:'done', channel:'', unit:w.price||0};
+  $('sDate').value = d.getFullYear()+'-'+pad2(d.getMonth()+1)+'-'+pad2(d.getDate());
+  $('sQty').textContent = '1개';
+  $('sAmount').value = String(w.price||0);
+  $('sCustomer').value = '';
+  $('sMemo').value = '';
+  saleChips();
+  $('saleModal').hidden = false;
+}
+$('btnSale').addEventListener('click', openSaleForm);
+$('closeSale').addEventListener('click', ()=>{ $('saleModal').hidden = true; });
+$('saleModal').addEventListener('click', e=>{ if(e.target.id==='saleModal') $('saleModal').hidden = true; });
+function setSaleQty(v){
+  saleDraft.qty = Math.min(999, Math.max(1, v));
+  $('sQty').textContent = saleDraft.qty+'개';
+  $('sAmount').value = String(saleDraft.unit * saleDraft.qty);
+}
+$('sMinus').addEventListener('click', ()=>setSaleQty(saleDraft.qty-1));
+$('sPlus').addEventListener('click', ()=>setSaleQty(saleDraft.qty+1));
+$('sCustomers').addEventListener('click', e=>{
+  const b = e.target.closest('[data-c]'); if(!b) return;
+  $('sCustomer').value = b.dataset.c;
+});
+$('sChannels').addEventListener('click', e=>{
+  const b = e.target.closest('[data-ch]'); if(!b) return;
+  saleDraft.channel = (saleDraft.channel===b.dataset.ch) ? '' : b.dataset.ch; saleChips();
+});
+$('sStatus').addEventListener('click', e=>{
+  const b = e.target.closest('[data-st]'); if(!b) return;
+  saleDraft.status = b.dataset.st; saleChips();
+});
+$('saveSale').addEventListener('click', ()=>{
+  const w = cur();
+  sales.unshift({
+    id: uid(), workId: w.id,
+    name: (S.title||'').trim() || '이름 없는 작품',
+    date: $('sDate').value || ym(new Date())+'-01',
+    qty: saleDraft.qty,
+    amount: n($('sAmount').value),
+    cost: w.cost||0,
+    customer: $('sCustomer').value.trim(),
+    channel: saleDraft.channel,
+    status: saleDraft.status,
+    memo: $('sMemo').value.trim()
+  });
+  $('saleModal').hidden = true;
+  saleSummary(); queueSave(); flash('판매 기록에 저장했어요');
+});
+function saleSummary(){
+  const w = cur(); if(!w) return;
+  const mine = sales.filter(x=>x.workId===w.id);
+  const qty = mine.reduce((a,b)=>a+n(b.qty||1),0);
+  const amt = mine.reduce((a,b)=>a+n(b.amount),0);
+  $('saleSummary').textContent = mine.length
+    ? '이 작품 '+qty+'개 판매 · 받은 금액 '+won(amt)+'원'
+    : '';
+}
+
+/* ── 작품 복제 ── */
+$('btnDup').addEventListener('click', ()=>{
+  const copy = JSON.parse(JSON.stringify(cur().data));
+  copy.title = ((copy.title||'').trim() || '이름 없는 작품') + ' (복사)';
+  copy.materials.forEach(m=>m.id = uid());
+  (copy.labors||[]).forEach(l=>l.id = uid());
+  copy.etc.forEach(x=>x.id = uid());
+  const w = {id:uid(), data:copy, price:cur().price, cost:cur().cost, updated:Date.now()};
+  works.unshift(w); queueSave(); openWork(w.id); flash('복제했어요');
+});
+
+/* ── 만들 개수 (참고용) ── */
+function setCount(v){
+  S.count = String(Math.min(999, Math.max(1, v)));
+  $('cntVal').textContent = S.count + '개';
+  calc(); queueSave();
+}
+$('cntMinus').addEventListener('click', ()=>setCount(n(S.count)-1));
+$('cntPlus').addEventListener('click', ()=>setCount(n(S.count)+1));
+
 /* ── 공유: 미리보기 후 내보내기 ── */
 let shareTab = 'card';
 let shareCanvas = null;
@@ -782,11 +1396,11 @@ function figures(){
   return {name:(S.title||'').trim()||'이름 없는 작품', price:w.price||0, cost:w.cost||0,
           profit:(w.price||0)-feeAmt-(w.cost||0)};
 }
-function buildText(inc){
+function buildText(mat, inc){
   const f = figures();
   let t = f.name + '\n판매가 ' + won(f.price) + '원';
   const list = usedList();
-  if(list.length) t += '\n\n' + list.map(x=>'· '+x).join('\n');
+  if(mat && list.length) t += '\n\n' + list.map(x=>'· '+x).join('\n');
   if(inc) t += '\n\n원가 ' + won(f.cost) + '원 · 남는 이익 ' + won(f.profit) + '원';
   return t + '\n\n— 매듭기록장';
 }
@@ -795,22 +1409,29 @@ function roundRect(g,x,y,w,h,r){
   g.arcTo(x+w,y,x+w,y+h,r); g.arcTo(x+w,y+h,x,y+h,r);
   g.arcTo(x,y+h,x,y,r); g.arcTo(x,y,x+w,y,r); g.closePath();
 }
-function drawCard(inc, done){
+function drawCard(mat, inc, done){
   const SZ = 1080, c = document.createElement('canvas');
   c.width = SZ; c.height = SZ;
   const g = c.getContext('2d');
   const f = figures();
-  const m = SZ*0.07, ph = SZ*0.44;
+  const lines = mat ? usedList().slice(0,6) : [];
+  const m = SZ*0.07, ph = lines.length > 2 ? SZ*0.34 : (lines.length ? SZ*0.40 : SZ*0.44);
   g.fillStyle = '#FBFAFD'; g.fillRect(0,0,SZ,SZ);
 
   const rest = () => {
-    let y = m + ph + SZ*0.10;
+    let y = m + ph + SZ*0.095;
     g.textAlign = 'center';
-    g.fillStyle = '#2A2340'; g.font = '800 '+Math.round(SZ*0.058)+'px '+FONT;
-    g.fillText(f.name, SZ/2, y); y += SZ*0.052;
-    const colors = S.materials.map(x=>x.memo).filter(Boolean).join(' · ');
-    if(colors){ g.fillStyle='#6E668A'; g.font='500 '+Math.round(SZ*0.028)+'px '+FONT; g.fillText(colors, SZ/2, y); }
-    y += SZ*0.05;
+    g.fillStyle = '#2A2340'; g.font = '800 '+Math.round(SZ*0.055)+'px '+FONT;
+    g.fillText(f.name, SZ/2, y); y += SZ*0.05;
+    if(lines.length){
+      g.fillStyle = '#6E668A'; g.font = '500 '+Math.round(SZ*0.028)+'px '+FONT;
+      lines.forEach(t=>{ g.fillText('· '+t, SZ/2, y); y += SZ*0.042; });
+      y += SZ*0.005;
+    }else{
+      const colors = S.materials.map(x=>x.memo).filter(Boolean).join(' · ');
+      if(colors){ g.fillStyle='#6E668A'; g.font='500 '+Math.round(SZ*0.028)+'px '+FONT; g.fillText(colors, SZ/2, y); }
+      y += SZ*0.05;
+    }
     g.strokeStyle = '#DED8E8'; g.lineWidth = 2;
     g.beginPath(); g.moveTo(m,y); g.lineTo(SZ-m,y); g.stroke();
     y += SZ*0.10;
@@ -852,13 +1473,13 @@ function drawCard(inc, done){
   }
 }
 function renderShare(){
-  const inc = $('incCost').checked;
+  const inc = $('incCost').checked, mat = $('incMat').checked;
   $('tabCard').classList.toggle('on', shareTab==='card');
   $('tabText').classList.toggle('on', shareTab==='text');
   $('cardPrev').hidden = shareTab!=='card';
   $('textPrev').hidden = shareTab!=='text';
-  if(shareTab==='card') drawCard(inc, c=>{ $('cardPrev').src = c.toDataURL('image/png'); });
-  else $('textPrev').textContent = buildText(inc);
+  if(shareTab==='card') drawCard(mat, inc, c=>{ $('cardPrev').src = c.toDataURL('image/png'); });
+  else $('textPrev').textContent = buildText(mat, inc);
 }
 $('btnShare').addEventListener('click', ()=>{ $('shareModal').hidden = false; renderShare(); });
 $('closeShare').addEventListener('click', ()=>{ $('shareModal').hidden = true; });
@@ -866,10 +1487,11 @@ $('shareModal').addEventListener('click', e=>{ if(e.target.id==='shareModal') $(
 $('tabCard').addEventListener('click', ()=>{ shareTab='card'; renderShare(); });
 $('tabText').addEventListener('click', ()=>{ shareTab='text'; renderShare(); });
 $('incCost').addEventListener('change', renderShare);
+$('incMat').addEventListener('change', renderShare);
 $('doShare').addEventListener('click', async ()=>{
-  const inc = $('incCost').checked;
+  const inc = $('incCost').checked, mat = $('incMat').checked;
   if(shareTab==='text'){
-    const text = buildText(inc);
+    const text = buildText(mat, inc);
     if(navigator.share){ try{ await navigator.share({text}); }catch(e){} return; }
     try{ await navigator.clipboard.writeText(text); flash('글을 복사했어요'); }
     catch(e){ flash('복사할 수 없어요. 길게 눌러 복사해주세요'); }
@@ -892,13 +1514,36 @@ $('doShare').addEventListener('click', async ()=>{
 });
 
 /* ── 백업 파일 ── */
-$('btnExport').addEventListener('click', ()=>{
-  const blob = new Blob([JSON.stringify({works, lib, menu}, null, 2)], {type:'application/json'});
+function stamp(){
   const d = new Date();
-  const stamp = d.getFullYear()+String(d.getMonth()+1).padStart(2,'0')+String(d.getDate()).padStart(2,'0');
+  return d.getFullYear()+String(d.getMonth()+1).padStart(2,'0')+String(d.getDate()).padStart(2,'0');
+}
+function download(obj, tag){
+  const blob = new Blob([JSON.stringify(obj, null, 2)], {type:'application/json'});
   const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob); a.download = '매듭기록장-'+stamp+'.json'; a.click();
-  flash('백업 파일을 저장했어요');
+  a.href = URL.createObjectURL(blob);
+  a.download = '매듭기록장-'+tag+'-'+stamp()+'.json';
+  a.click();
+  flash('파일을 저장했어요');
+}
+/* 작품만 보낼 때는 재료 단가를 줄마다 넣어둡니다 (상대 폰에 내 재료 목록이 없어도 금액이 나오도록) */
+function worksForExport(){
+  return JSON.parse(JSON.stringify(works)).map(w=>{
+    (w.data.materials||[]).forEach(m=>{
+      const l = libOf(m.libId);
+      if(l){ m.name = l.name; m.unit = l.unit; m.buyCost = l.cost; m.buyQty = l.qty; }
+    });
+    return w;
+  });
+}
+$('btnExportAll').addEventListener('click', ()=>download({kind:'all', works:worksForExport(), lib, menu, sales}, '전체'));
+$('btnExportLib').addEventListener('click', ()=>{
+  if(!lib.length) return flash('등록된 재료가 없어요');
+  download({kind:'lib', lib}, '재료목록');
+});
+$('btnExportWorks').addEventListener('click', ()=>{
+  if(!works.length) return flash('기록한 작품이 없어요');
+  download({kind:'works', works:worksForExport()}, '작품기록');
 });
 $('fileImport').addEventListener('change', e=>{
   const file = e.target.files && e.target.files[0];
@@ -906,19 +1551,28 @@ $('fileImport').addEventListener('change', e=>{
   if(!file) return;
   const fr = new FileReader();
   fr.onload = () => {
-    try{
-      const data = JSON.parse(fr.result);
-      if(!data || (!data.works && !data.lib)) throw 0;
-      const mode = confirm('지금 자료를 지우고 파일 내용으로 바꿀까요?\n\n취소를 누르면 지금 자료에 더해서 넣습니다.');
-      if(mode){
-        works = data.works || []; lib = data.lib || lib;
-        if(data.menu) menu = data.menu;
-      }else{
-        works = (data.works||[]).concat(works);
-        (data.lib||[]).forEach(l=>{ if(!lib.find(x=>x.name===l.name)) lib.push(l); });
-      }
-      renderHome(); renderWorks(); save(); flash('가져왔어요');
-    }catch(err){ flash('읽을 수 없는 파일이에요'); }
+    let data;
+    try { data = JSON.parse(fr.result); } catch(err){ return flash('읽을 수 없는 파일이에요'); }
+    const hasLib = Array.isArray(data.lib), hasWorks = Array.isArray(data.works);
+    if(!hasLib && !hasWorks) return flash('매듭기록장 백업 파일이 아니에요');
+    const what = (hasLib && hasWorks) ? '재료 목록과 작품 기록'
+               : hasLib ? '재료 목록' : '작품 기록';
+    const replace = confirm(what + ' 파일이에요.\n\n확인 = 지금 내용을 지우고 파일로 바꾸기\n취소 = 지금 내용에 더하기');
+    if(hasLib){
+      if(replace) lib = data.lib;
+      else data.lib.forEach(l=>{ if(!lib.find(x=>x.name===l.name)) lib.push(Object.assign({}, l, {id:uid()})); });
+    }
+    if(hasWorks){
+      const incoming = data.works.map(w=>{
+        if(!w.data.labors) w.data.labors = [{id:uid(), name:'매듭 작업', minutes:w.data.minutes||'', wage:w.data.wage||''}];
+        return w;
+      });
+      works = replace ? incoming : incoming.concat(works);
+    }
+    if(Array.isArray(data.sales)) sales = replace ? data.sales : data.sales.concat(sales);
+    if(hasLib && hasWorks && data.menu && replace) menu = data.menu;
+    renderHome(); renderWorks(); save();
+    flash(what + '을 가져왔어요');
   };
   fr.readAsText(file);
 });
@@ -927,9 +1581,14 @@ $('fileImport').addEventListener('change', e=>{
 (async ()=>{
   const saved = await load();
   if(saved && saved.lib) lib = saved.lib;
+  normalizeLib();
+  if(saved && saved.sortBy) sortBy = saved.sortBy;
+  if(saved && saved.sales) sales = saved.sales;
+  if(saved && saved.libSort) libSort = saved.libSort;
+  if(saved && saved.saleSort) saleSort = saved.saleSort;
   if(saved && saved.menu){
-    const keep = saved.menu.filter(m=>m.key==='lib'||m.key==='works');
-    ['lib','works'].forEach(k=>{ if(!keep.find(m=>m.key===k)) keep.push({key:k, label:k==='lib'?'재료 목록':'원가계산표'}); });
+    const keep = saved.menu.filter(m=>DEFMENU[m.key]);
+    Object.keys(DEFMENU).forEach(k=>{ if(!keep.find(m=>m.key===k)) keep.push({key:k, label:DEFMENU[k]}); });
     menu = keep;
   }
   if(saved && saved.works){
