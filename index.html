@@ -180,7 +180,7 @@
   .gbar{display:flex;justify-content:space-between;align-items:center;padding:14px 2px 4px;font-size:11px;letter-spacing:.14em;color:var(--sub);font-weight:700}
   #viewWork{display:flex;flex-direction:column}
   body.rec .sum, body.rec .each, body.rec .buyinfo{display:none !important}
-  #photoModal{background:rgba(16,13,26,.92);align-items:center}
+  #photoModal{background:rgba(16,13,26,.92);align-items:center;z-index:60}
   .viewer{width:100%;max-width:560px;padding:16px;display:flex;flex-direction:column;align-items:center;gap:12px}
   .viewer .frame{width:100%;overflow:auto;border-radius:18px;background:#000;display:flex;align-items:center;justify-content:center}
   .viewer img{max-width:100%;max-height:70vh;display:block;transition:transform .2s;transform-origin:center}
@@ -214,7 +214,7 @@
   </label>
   <div class="hint">재료 목록만 보내면 상대는 내 단가만 받고, 작품 기록은 넘어가지 않아요. 가져오기는 어떤 파일인지 알아서 구분합니다.</div>
 
-  <div class="ver">매듭기록장 · v36</div>
+  <div class="ver">매듭기록장 · v38</div>
 </section>
 
 <!-- ═══ 작품 목록 ═══ -->
@@ -508,6 +508,13 @@
     <div class="sorts" id="eColors"></div>
     <div style="font-size:12px;color:var(--sub);margin:6px 0 8px">반복</div>
     <div class="sorts" id="eRepeat"></div>
+    <div id="ePickRow" style="margin-bottom:10px" hidden>
+      <div class="row" style="margin-bottom:8px">
+        <input type="date" id="ePickDate" style="flex:1;border:1px solid var(--line);background:#FBFAFD;border-radius:12px;padding:10px;font-size:14px;font-weight:600;color:var(--ink)">
+        <button class="link" id="ePickAdd">+ 날짜 넣기</button>
+      </div>
+      <div class="sorts" id="ePickList"></div>
+    </div>
     <div class="row" id="eUntilRow" style="margin-bottom:10px" hidden>
       <span style="font-size:12px;color:var(--sub);flex:0 0 auto">반복 끝</span>
       <input type="date" id="eUntil" style="flex:1;border:1px solid var(--line);background:#FBFAFD;border-radius:12px;padding:10px;font-size:14px;font-weight:600;color:var(--ink)">
@@ -1834,8 +1841,11 @@ const RANGES = [['0','오늘'],['7','1주일'],['30','1달']];
 const EVT_COLORS = ['#6C5B8C','#1F6F6B','#A8446A','#C9922B','#4E9C8E','#4A6FB5','#8A5A3B','#2A2340'];
 const REMINDS = [['','없음'],['10','10분 전'],['30','30분 전'],['60','1시간 전'],['1440','하루 전']];
 const DOW = ['일','월','화','수','목','금','토'];
-const REPEATS = [['','반복 없음'],['day','매일'],['week','매주'],['month','매월']];
+const REPEATS = [['','반복 없음'],['day','매일'],['week','매주'],['month','매월'],['pick','날짜 직접 고르기']];
 function occursOn(ev, date){
+  if(ev.repeat === 'pick'){
+    return date === ev.date || (ev.dates || []).indexOf(date) >= 0;
+  }
   if(ev.date === date) return true;
   if(!ev.repeat || date < ev.date) return false;
   if(ev.until && date > ev.until) return false;
@@ -1916,7 +1926,7 @@ function renderCal(){
       '<span style="flex:1;min-width:0">' +
         '<span style="font-size:15px;font-weight:700">'+esc(e.title)+'</span><br>' +
         '<span style="font-size:11.5px;color:var(--sub)">'+hhmm(e.time)+
-          (e.repeat ? ' · '+(REPEATS.find(r=>r[0]===e.repeat)||['',''])[1] : '') +
+          (e.repeat ? ' · '+((REPEATS.find(r=>r[0]===e.repeat)||['',''])[1])+(e.repeat==='pick' ? ' '+(1+((e.dates||[]).length))+'일' : '') : '') +
           (e.remind ? ' · 알림 '+((REMINDS.find(r=>r[0]===String(e.remind))||['',''])[1]) : '') +
           (e.memo ? ' · '+esc(e.memo) : '') + '</span>' +
       '</span>' +
@@ -1942,11 +1952,19 @@ function evtChips(color, remind){
   $('eColors').innerHTML = EVT_COLORS.map(c=>'<button class="cdot2'+(c===color?' on':'')+'" data-col="'+c+'" style="background:'+c+'"></button>').join('');
   $('eRemind').innerHTML = REMINDS.map(([v,l])=>'<button class="chip'+(String(remind||'')===v?' on':'')+'" data-rm="'+v+'">'+l+'</button>').join('');
   $('eRepeat').innerHTML = REPEATS.map(([v,l])=>'<button class="chip'+((evtEdit.repeat||'')===v?' on':'')+'" data-rp="'+v+'">'+l+'</button>').join('');
-  $('eUntilRow').hidden = !evtEdit.repeat;
+  const pick = evtEdit.repeat === 'pick';
+  $('ePickRow').hidden = !pick;
+  $('eUntilRow').hidden = !evtEdit.repeat || pick;
+  if(pick){
+    const all = [evtEdit.date].concat(evtEdit.dates||[]).filter(Boolean);
+    $('ePickList').innerHTML = all.map((dt,i)=>
+      '<button class="chip'+(i===0?' on':'')+'" data-pd="'+dt+'">'+dt.slice(5).replace('-','/')+(i===0?' (기준)':' ×')+'</button>'
+    ).join('');
+  }
   $('eUntil').value = evtEdit.until || '';
 }
 function openEvt(ev){
-  evtEdit = ev || {id:uid(), date:calDay, time:'', title:'', color:EVT_COLORS[0], remind:'30', memo:'', repeat:'', until:''};
+  evtEdit = ev || {id:uid(), date:calDay, time:'', title:'', color:EVT_COLORS[0], remind:'30', memo:'', dates:[], repeat:'', until:''};
   $('evtCap').textContent = ev ? '일정 고치기' : '새 일정';
   $('evtDel').hidden = !ev;
   $('eTitle').value = evtEdit.title || '';
@@ -1976,6 +1994,22 @@ $('eRepeat').addEventListener('click', e=>{
   if(!evtEdit.repeat) evtEdit.until = '';
   evtChips(evtEdit.color, evtEdit.remind);
 });
+$('ePickAdd').addEventListener('click', ()=>{
+  const dt = $('ePickDate').value;
+  if(!dt) return flash('날짜를 고른 뒤 눌러주세요');
+  evtEdit.dates = evtEdit.dates || [];
+  if(dt === evtEdit.date || evtEdit.dates.indexOf(dt) >= 0) return flash('이미 들어 있어요');
+  evtEdit.dates.push(dt); evtEdit.dates.sort();
+  $('ePickDate').value = '';
+  evtChips(evtEdit.color, evtEdit.remind);
+});
+$('ePickList').addEventListener('click', e=>{
+  const b = e.target.closest('[data-pd]'); if(!b) return;
+  const dt = b.dataset.pd;
+  if(dt === evtEdit.date) return flash('기준 날짜는 위 날짜 칸에서 바꿔주세요');
+  evtEdit.dates = (evtEdit.dates||[]).filter(x=>x!==dt);
+  evtChips(evtEdit.color, evtEdit.remind);
+});
 $('eUntil').addEventListener('change', e=>{ evtEdit.until = e.target.value || ''; });
 $('eUntilClear').addEventListener('click', ()=>{ evtEdit.until = ''; $('eUntil').value = ''; });
 $('eRemind').addEventListener('click', e=>{
@@ -1996,8 +2030,10 @@ $('evtSave').addEventListener('click', ()=>{
   evtEdit.date = $('eDate').value || calDay;
   evtEdit.time = $('eTime').value || '';
   evtEdit.memo = $('eMemo').value.trim();
-  evtEdit.until = $('eUntil').value || '';
-  if(!events.find(x=>x.id===evtEdit.id)) events.push(evtEdit);
+  evtEdit.until = evtEdit.repeat === 'pick' ? '' : ($('eUntil').value || '');
+  if(evtEdit.repeat !== 'pick') delete evtEdit.dates;
+  const at = events.findIndex(x=>x.id===evtEdit.id);
+  if(at >= 0) events[at] = evtEdit; else events.push(evtEdit);
   calDay = evtEdit.date; calMonth = evtEdit.date.slice(0,7);
   $('evtModal').hidden = true; renderCal(); renderHome(); queueSave();
   flash('일정을 저장했어요');
@@ -2013,7 +2049,10 @@ function toICS(ev){
     (ev.time ? 'DTSTART:'+start+'\nDTEND:'+end+'\n' : 'DTSTART;VALUE=DATE:'+start+'\n') +
     'SUMMARY:'+ev.title+'\n' + (ev.memo ? 'DESCRIPTION:'+ev.memo+'\n' : '');
   if(ev.repeat){
-    const R = {day:'DAILY', week:'WEEKLY', month:'MONTHLY'}[ev.repeat];
+    if(ev.repeat === 'pick' && (ev.dates||[]).length){
+    body += 'RDATE;VALUE=DATE:' + ev.dates.map(d=>d.replace(/-/g,'')).join(',') + '\n';
+  }
+  const R = {day:'DAILY', week:'WEEKLY', month:'MONTHLY'}[ev.repeat];
     body += 'RRULE:FREQ='+R + (ev.until ? ';UNTIL='+ev.until.replace(/-/g,'')+'T235900' : '') + '\n';
   }
   if(ev.remind) body += 'BEGIN:VALARM\nTRIGGER:-PT'+ev.remind+'M\nACTION:DISPLAY\nDESCRIPTION:'+ev.title+'\nEND:VALARM\n';
