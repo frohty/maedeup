@@ -214,7 +214,7 @@
   </label>
   <div class="hint">재료 목록만 보내면 상대는 내 단가만 받고, 작품 기록은 넘어가지 않아요. 가져오기는 어떤 파일인지 알아서 구분합니다.</div>
 
-  <div class="ver">매듭기록장 · v34</div>
+  <div class="ver">매듭기록장 · v36</div>
 </section>
 
 <!-- ═══ 작품 목록 ═══ -->
@@ -342,6 +342,9 @@
 <section id="viewCal" hidden>
   <button class="back" id="backHome6">‹ 처음으로</button>
   <h1 id="calTitle">일정</h1>
+  <div class="card" style="padding:12px 16px">
+    <div class="sorts" id="rangeTabs" style="margin:0"></div>
+  </div>
   <div class="result" id="todayCard" hidden></div>
   <div class="card">
     <div class="monthbar">
@@ -503,6 +506,13 @@
     </div>
     <div style="font-size:12px;color:var(--sub);margin:14px 0 8px">색</div>
     <div class="sorts" id="eColors"></div>
+    <div style="font-size:12px;color:var(--sub);margin:6px 0 8px">반복</div>
+    <div class="sorts" id="eRepeat"></div>
+    <div class="row" id="eUntilRow" style="margin-bottom:10px" hidden>
+      <span style="font-size:12px;color:var(--sub);flex:0 0 auto">반복 끝</span>
+      <input type="date" id="eUntil" style="flex:1;border:1px solid var(--line);background:#FBFAFD;border-radius:12px;padding:10px;font-size:14px;font-weight:600;color:var(--ink)">
+      <button class="link" id="eUntilClear">비우기</button>
+    </div>
     <div style="font-size:12px;color:var(--sub);margin:6px 0 8px">알림</div>
     <div class="sorts" id="eRemind"></div>
     <div style="font-size:12px;color:var(--sub);margin:6px 0 6px">메모</div>
@@ -690,7 +700,7 @@ function resolved(m){
 
 /* ── 저장 ── */
 async function save(){
-  const payload = JSON.stringify({works, lib, menu, sortBy, sales, libSort, saleSort, events, money});
+  const payload = JSON.stringify({works, lib, menu, sortBy, sales, libSort, saleSort, events, money, calRange});
   try { localStorage.setItem(KEY, payload); return; } catch(e){}
   try { await window.storage.set(KEY, payload); } catch(e){}
 }
@@ -1429,12 +1439,16 @@ function calc(){
 
 /* ── 사진 크게 보기 ── */
 let photoIdx = 0;
+let viewMode = 'work';   /* 'work' = 작품 사진, 'receipt' = 영수증 */
+const viewPhotos = () => viewMode==='receipt' ? ((mEdit && mEdit.photos) || []) : S.photos;
 function showPhoto(i){
-  if(!S.photos.length){ $('photoModal').hidden = true; return; }
-  photoIdx = (i + S.photos.length) % S.photos.length;
-  $('photoBig').src = S.photos[photoIdx];
+  const arr = viewPhotos();
+  if(!arr.length){ $('photoModal').hidden = true; return; }
+  photoIdx = (i + arr.length) % arr.length;
+  $('photoBig').src = arr[photoIdx];
   $('photoBig').classList.remove('zoom');
-  $('pCount').textContent = (photoIdx+1) + ' / ' + S.photos.length;
+  $('pCount').textContent = (photoIdx+1) + ' / ' + viewPhotos().length;
+  $('pRep').hidden = viewMode!=='work';
   $('pRep').style.opacity = photoIdx===0 ? .4 : 1;
 }
 $('shots').addEventListener('click', e=>{
@@ -1442,7 +1456,7 @@ $('shots').addEventListener('click', e=>{
   const box = e.target.closest('.shot');
   const idx = Array.prototype.indexOf.call($('shots').children, box);
   if(idx < 0) return;
-  showPhoto(idx);
+  viewMode = 'work'; showPhoto(idx);
   $('photoModal').hidden = false;
 });
 $('photoBig').addEventListener('click', e=>{ e.target.classList.toggle('zoom'); });
@@ -1456,10 +1470,10 @@ $('pRep').addEventListener('click', ()=>{
   renderPhotos(); queueSave(); showPhoto(0); flash('대표 사진으로 바꿨어요');
 });
 $('pDel').addEventListener('click', ()=>{
-  if(!askDelete('이 사진')) return;
-  S.photos.splice(photoIdx,1);
-  renderPhotos(); queueSave();
-  if(!S.photos.length){ $('photoModal').hidden = true; return; }
+  if(!askDelete(viewMode==='receipt' ? '이 영수증 사진' : '이 사진')) return;
+  viewPhotos().splice(photoIdx,1);
+  if(viewMode==='receipt') moneyChips(); else { renderPhotos(); queueSave(); }
+  if(!viewPhotos().length){ $('photoModal').hidden = true; return; }
   showPhoto(photoIdx);
 });
 
@@ -1769,6 +1783,14 @@ $('mCats').addEventListener('click', e=>{
   $('mCat').value = b.dataset.cat;
 });
 $('mShots').addEventListener('click', e=>{
+  if(e.target.tagName === 'IMG'){
+    const box = e.target.closest('.shot');
+    const idx = Array.prototype.indexOf.call($('mShots').children, box);
+    if(idx < 0) return;
+    viewMode = 'receipt'; showPhoto(idx);
+    $('photoModal').hidden = false;
+    return;
+  }
   const b = e.target.closest('[data-rm]'); if(!b) return;
   if(!askDelete('이 영수증 사진')) return;
   mEdit.photos.splice(+b.dataset.rm,1); moneyChips();
@@ -1807,11 +1829,24 @@ $('mSave').addEventListener('click', ()=>{
 /* ── 일정 ── */
 let events = [];
 let calMonth = null, calDay = null, evtEdit = null;
+let calRange = '7';
+const RANGES = [['0','오늘'],['7','1주일'],['30','1달']];
 const EVT_COLORS = ['#6C5B8C','#1F6F6B','#A8446A','#C9922B','#4E9C8E','#4A6FB5','#8A5A3B','#2A2340'];
 const REMINDS = [['','없음'],['10','10분 전'],['30','30분 전'],['60','1시간 전'],['1440','하루 전']];
 const DOW = ['일','월','화','수','목','금','토'];
+const REPEATS = [['','반복 없음'],['day','매일'],['week','매주'],['month','매월']];
+function occursOn(ev, date){
+  if(ev.date === date) return true;
+  if(!ev.repeat || date < ev.date) return false;
+  if(ev.until && date > ev.until) return false;
+  const a = new Date(ev.date), b = new Date(date);
+  if(ev.repeat === 'day') return true;
+  if(ev.repeat === 'week') return a.getDay() === b.getDay();
+  if(ev.repeat === 'month') return a.getDate() === b.getDate();
+  return false;
+}
 function dayEvents(date){
-  const list = events.filter(x=>x.date===date).slice();
+  const list = events.filter(x=>occursOn(x, date)).map(x=> x.date===date ? x : Object.assign({}, x, {date:date, repeated:true}));
   making().filter(x=>x.due===date).forEach(x=>{
     list.push({id:'due-'+x.id, date:date, time:'', title:x.name+' 마감', color:'#A8446A', memo:x.customer||'', due:true});
   });
@@ -1843,19 +1878,30 @@ function renderCal(){
   }
   $('calGrid').innerHTML = h + '</div>';
 
-  /* 오늘·지난 일정 */
+  /* 앞으로의 일정 (지난 일정은 빼고) */
+  $('rangeTabs').innerHTML = RANGES.map(([v,l])=>
+    '<button class="chip'+(String(calRange)===v?' on':'')+'" data-rg="'+v+'">'+l+'</button>').join('');
   const t = today();
-  const soon = events.filter(x=>x.date<=t).concat(making().filter(x=>x.due && x.due<=t).map(x=>({date:x.due, time:'', title:x.name+' 마감'})))
-    .sort((a,b)=>(a.date+a.time).localeCompare(b.date+b.time));
-  const todays = soon.filter(x=>x.date===t), late = soon.filter(x=>x.date<t);
-  if(todays.length || late.length){
+  const upto = new Date(t); upto.setDate(upto.getDate() + Number(calRange));
+  const end = upto.getFullYear()+'-'+pad2(upto.getMonth()+1)+'-'+pad2(upto.getDate());
+  const soon = [];
+  for(let d = new Date(t); ; d.setDate(d.getDate()+1)){
+    const date = d.getFullYear()+'-'+pad2(d.getMonth()+1)+'-'+pad2(d.getDate());
+    if(date > end) break;
+    dayEvents(date).forEach(e=>soon.push(e));
+  }
+  if(soon.length){
     $('todayCard').hidden = false;
-    $('todayCard').innerHTML =
-      (todays.length ? '<div class="cap">오늘</div>' + todays.map(x=>
-        '<div class="row" style="margin-top:6px"><span style="font-size:19px;font-weight:800;flex:1">'+esc(x.title)+'</span>' +
-        '<span style="font-size:14px;opacity:.75">'+(x.time?hhmm(x.time):'')+'</span></div>').join('') : '') +
-      (late.length ? '<div class="cap" style="margin-top:'+(todays.length?14:0)+'px;color:#FFB4C6">지난 일정 '+late.length+'건</div>' +
-        late.slice(0,3).map(x=>'<div style="font-size:14px;opacity:.8;margin-top:4px">'+esc(x.date.slice(5).replace('-','/'))+'  '+esc(x.title)+'</div>').join('') : '');
+    $('todayCard').innerHTML = '<div class="cap">' +
+      (Number(calRange)===0 ? '오늘' : '앞으로 '+RANGES.find(r=>r[0]===String(calRange))[1]) +
+      ' · ' + soon.length + '건</div>' +
+      soon.slice(0,8).map(x=>
+        '<div class="row" style="margin-top:8px">' +
+          '<span style="width:8px;height:8px;border-radius:99px;background:'+(x.color||'#B9B2CC')+';flex:0 0 auto"></span>' +
+          '<span style="font-size:16px;font-weight:700;flex:1;min-width:0">'+esc(x.title)+'</span>' +
+          '<span style="font-size:13px;opacity:.75">'+(x.date===t?'오늘':x.date.slice(5).replace('-','/'))+(x.time?' '+hhmm(x.time):'')+'</span>' +
+        '</div>').join('') +
+      (soon.length>8 ? '<div style="font-size:12px;opacity:.6;margin-top:8px">외 '+(soon.length-8)+'건</div>' : '');
   }else{
     $('todayCard').hidden = true;
   }
@@ -1870,6 +1916,7 @@ function renderCal(){
       '<span style="flex:1;min-width:0">' +
         '<span style="font-size:15px;font-weight:700">'+esc(e.title)+'</span><br>' +
         '<span style="font-size:11.5px;color:var(--sub)">'+hhmm(e.time)+
+          (e.repeat ? ' · '+(REPEATS.find(r=>r[0]===e.repeat)||['',''])[1] : '') +
           (e.remind ? ' · 알림 '+((REMINDS.find(r=>r[0]===String(e.remind))||['',''])[1]) : '') +
           (e.memo ? ' · '+esc(e.memo) : '') + '</span>' +
       '</span>' +
@@ -1878,6 +1925,10 @@ function renderCal(){
     '</div>').join('')
     : '<div class="hint" style="margin:0">이 날은 일정이 없어요.</div>';
 }
+$('rangeTabs').addEventListener('click', e=>{
+  const b = e.target.closest('[data-rg]'); if(!b) return;
+  calRange = b.dataset.rg; renderCal(); queueSave();
+});
 $('calGrid').addEventListener('click', e=>{
   const b = e.target.closest('[data-d]'); if(!b) return;
   calDay = b.dataset.d; renderCal();
@@ -1890,9 +1941,12 @@ $('cNow').addEventListener('click', ()=>{ calMonth = ym(new Date()); calDay = to
 function evtChips(color, remind){
   $('eColors').innerHTML = EVT_COLORS.map(c=>'<button class="cdot2'+(c===color?' on':'')+'" data-col="'+c+'" style="background:'+c+'"></button>').join('');
   $('eRemind').innerHTML = REMINDS.map(([v,l])=>'<button class="chip'+(String(remind||'')===v?' on':'')+'" data-rm="'+v+'">'+l+'</button>').join('');
+  $('eRepeat').innerHTML = REPEATS.map(([v,l])=>'<button class="chip'+((evtEdit.repeat||'')===v?' on':'')+'" data-rp="'+v+'">'+l+'</button>').join('');
+  $('eUntilRow').hidden = !evtEdit.repeat;
+  $('eUntil').value = evtEdit.until || '';
 }
 function openEvt(ev){
-  evtEdit = ev || {id:uid(), date:calDay, time:'', title:'', color:EVT_COLORS[0], remind:'30', memo:''};
+  evtEdit = ev || {id:uid(), date:calDay, time:'', title:'', color:EVT_COLORS[0], remind:'30', memo:'', repeat:'', until:''};
   $('evtCap').textContent = ev ? '일정 고치기' : '새 일정';
   $('evtDel').hidden = !ev;
   $('eTitle').value = evtEdit.title || '';
@@ -1906,13 +1960,24 @@ $('btnEvt').addEventListener('click', ()=>openEvt(null));
 $('dayList').addEventListener('click', e=>{
   const row = e.target.closest('.evt'); if(!row) return;
   const ev = events.find(x=>x.id===row.dataset.id);
-  if(e.target.closest('[data-ics]')){ if(ev) toICS(ev); return; }
+  if(e.target.closest('[data-ics]')){
+    if(ev) toICS(Object.assign({}, ev, {date: calDay}));
+    return;
+  }
   if(ev) openEvt(ev);
 });
 $('eColors').addEventListener('click', e=>{
   const b = e.target.closest('[data-col]'); if(!b) return;
   evtEdit.color = b.dataset.col; evtChips(evtEdit.color, evtEdit.remind);
 });
+$('eRepeat').addEventListener('click', e=>{
+  const b = e.target.closest('[data-rp]'); if(!b) return;
+  evtEdit.repeat = b.dataset.rp;
+  if(!evtEdit.repeat) evtEdit.until = '';
+  evtChips(evtEdit.color, evtEdit.remind);
+});
+$('eUntil').addEventListener('change', e=>{ evtEdit.until = e.target.value || ''; });
+$('eUntilClear').addEventListener('click', ()=>{ evtEdit.until = ''; $('eUntil').value = ''; });
 $('eRemind').addEventListener('click', e=>{
   const b = e.target.closest('[data-rm]'); if(!b) return;
   evtEdit.remind = b.dataset.rm; evtChips(evtEdit.color, evtEdit.remind);
@@ -1931,6 +1996,7 @@ $('evtSave').addEventListener('click', ()=>{
   evtEdit.date = $('eDate').value || calDay;
   evtEdit.time = $('eTime').value || '';
   evtEdit.memo = $('eMemo').value.trim();
+  evtEdit.until = $('eUntil').value || '';
   if(!events.find(x=>x.id===evtEdit.id)) events.push(evtEdit);
   calDay = evtEdit.date; calMonth = evtEdit.date.slice(0,7);
   $('evtModal').hidden = true; renderCal(); renderHome(); queueSave();
@@ -1946,6 +2012,10 @@ function toICS(ev){
     'UID:'+ev.id+'@maedeup\n' +
     (ev.time ? 'DTSTART:'+start+'\nDTEND:'+end+'\n' : 'DTSTART;VALUE=DATE:'+start+'\n') +
     'SUMMARY:'+ev.title+'\n' + (ev.memo ? 'DESCRIPTION:'+ev.memo+'\n' : '');
+  if(ev.repeat){
+    const R = {day:'DAILY', week:'WEEKLY', month:'MONTHLY'}[ev.repeat];
+    body += 'RRULE:FREQ='+R + (ev.until ? ';UNTIL='+ev.until.replace(/-/g,'')+'T235900' : '') + '\n';
+  }
   if(ev.remind) body += 'BEGIN:VALARM\nTRIGGER:-PT'+ev.remind+'M\nACTION:DISPLAY\nDESCRIPTION:'+ev.title+'\nEND:VALARM\n';
   body += 'END:VEVENT\nEND:VCALENDAR';
   const blob = new Blob([body], {type:'text/calendar'});
@@ -2350,6 +2420,7 @@ $('fileImport').addEventListener('change', e=>{
   if(saved && saved.sales) sales = saved.sales;
   if(saved && saved.events) events = saved.events;
   if(saved && saved.money) money = saved.money;
+  if(saved && saved.calRange) calRange = saved.calRange;
   if(saved && saved.libSort) libSort = saved.libSort;
   if(saved && saved.saleSort) saleSort = saved.saleSort;
   if(saved && saved.menu){
