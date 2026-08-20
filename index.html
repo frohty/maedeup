@@ -214,7 +214,7 @@
   </label>
   <div class="hint">재료 목록만 보내면 상대는 내 단가만 받고, 작품 기록은 넘어가지 않아요. 가져오기는 어떤 파일인지 알아서 구분합니다.</div>
 
-  <div class="ver">매듭기록장 · v38</div>
+  <div class="ver">매듭기록장 · v39</div>
 </section>
 
 <!-- ═══ 작품 목록 ═══ -->
@@ -493,6 +493,10 @@
   <div class="sheet">
     <div class="grab"></div>
     <div class="head"><span class="cap" id="evtCap">일정</span><button class="link" id="evtDel" style="color:var(--rose)">삭제</button></div>
+    <div id="evtScopeRow" hidden>
+      <div style="font-size:12px;color:var(--sub);margin-bottom:8px">이 반복 일정에서</div>
+      <div class="sorts" id="evtScope"></div>
+    </div>
     <input type="text" id="eTitle" placeholder="예: 김지현님 팔찌 발송">
     <div class="row" style="gap:10px;margin-top:12px">
       <div style="flex:1">
@@ -1856,7 +1860,12 @@ function occursOn(ev, date){
   return false;
 }
 function dayEvents(date){
-  const list = events.filter(x=>occursOn(x, date)).map(x=> x.date===date ? x : Object.assign({}, x, {date:date, repeated:true}));
+  const list = events
+    .filter(x=>occursOn(x, date) && (x.exdates||[]).indexOf(date) < 0)
+    .map(x=>{
+      const ov = (x.overrides||{})[date] || {};
+      return Object.assign({}, x, ov, {date:date, srcId:x.id, repeated:x.date!==date || !!x.repeat});
+    });
   making().filter(x=>x.due===date).forEach(x=>{
     list.push({id:'due-'+x.id, date:date, time:'', title:x.name+' 마감', color:'#A8446A', memo:x.customer||'', due:true});
   });
@@ -1963,17 +1972,37 @@ function evtChips(color, remind){
   }
   $('eUntil').value = evtEdit.until || '';
 }
-function openEvt(ev){
-  evtEdit = ev || {id:uid(), date:calDay, time:'', title:'', color:EVT_COLORS[0], remind:'30', memo:'', dates:[], repeat:'', until:''};
+let evtSrc = null, evtOcc = null, evtScope = 'all';
+function scopeChips(){
+  const rep = !!(evtSrc && evtSrc.repeat);
+  $('evtScopeRow').hidden = !rep;
+  if(!rep){ evtScope = 'all'; return; }
+  $('evtScope').innerHTML = [['one','이 날만'],['all','전체 일정']]
+    .map(([k,l])=>'<button class="chip'+(evtScope===k?' on':'')+'" data-sc="'+k+'">'+l+'</button>').join('');
+}
+function openEvt(ev, occ){
+  evtSrc = ev || null;
+  evtOcc = occ || (ev ? ev.date : calDay);
+  evtScope = (ev && ev.repeat) ? 'one' : 'all';
+  const base = ev ? Object.assign({}, ev, ((ev.overrides||{})[evtOcc] || {})) : null;
+  evtEdit = base || {id:uid(), date:calDay, time:'', title:'', color:EVT_COLORS[0], remind:'30', memo:'', dates:[], repeat:'', until:''};
   $('evtCap').textContent = ev ? '일정 고치기' : '새 일정';
   $('evtDel').hidden = !ev;
   $('eTitle').value = evtEdit.title || '';
-  $('eDate').value = evtEdit.date || calDay;
+  $('eDate').value = evtOcc;
   $('eTime').value = evtEdit.time || '';
   $('eMemo').value = evtEdit.memo || '';
+  scopeChips();
   evtChips(evtEdit.color, evtEdit.remind);
   $('evtModal').hidden = false;
 }
+$('evtScope').addEventListener('click', e=>{
+  const b = e.target.closest('[data-sc]'); if(!b) return;
+  evtScope = b.dataset.sc;
+  if(evtScope==='all' && evtSrc) $('eDate').value = evtSrc.date;
+  else $('eDate').value = evtOcc;
+  scopeChips(); evtChips(evtEdit.color, evtEdit.remind);
+});
 $('btnEvt').addEventListener('click', ()=>openEvt(null));
 $('dayList').addEventListener('click', e=>{
   const row = e.target.closest('.evt'); if(!row) return;
@@ -1982,7 +2011,7 @@ $('dayList').addEventListener('click', e=>{
     if(ev) toICS(Object.assign({}, ev, {date: calDay}));
     return;
   }
-  if(ev) openEvt(ev);
+  if(ev) openEvt(ev, calDay);
 });
 $('eColors').addEventListener('click', e=>{
   const b = e.target.closest('[data-col]'); if(!b) return;
@@ -2019,13 +2048,41 @@ $('eRemind').addEventListener('click', e=>{
 $('evtClose').addEventListener('click', ()=>{ $('evtModal').hidden = true; });
 $('evtModal').addEventListener('click', e=>{ if(e.target.id==='evtModal') $('evtModal').hidden = true; });
 $('evtDel').addEventListener('click', ()=>{
-  if(!askDelete('일정 "'+(evtEdit.title||'제목 없음')+'"')) return;
+  if(evtSrc && evtSrc.repeat && evtScope === 'one'){
+    if(!askDelete(evtOcc.slice(5).replace('-','/')+' "'+(evtEdit.title||'제목 없음')+'" (이 날만)')) return;
+    evtSrc.exdates = (evtSrc.exdates||[]).concat(evtOcc);
+    if(evtSrc.overrides) delete evtSrc.overrides[evtOcc];
+    $('evtModal').hidden = true; renderCal(); renderHome(); queueSave();
+    flash('이 날 일정만 지웠어요');
+    return;
+  }
+  if(!askDelete('일정 "'+(evtEdit.title||'제목 없음')+'" (전체)')) return;
   events = events.filter(x=>x.id!==evtEdit.id);
   $('evtModal').hidden = true; renderCal(); renderHome(); queueSave();
 });
 $('evtSave').addEventListener('click', ()=>{
   const t = $('eTitle').value.trim();
   if(!t) return flash('제목을 적어주세요');
+
+  /* 반복 일정에서 "이 날만" 고친 경우 */
+  if(evtSrc && evtSrc.repeat && evtScope === 'one'){
+    const newDate = $('eDate').value || evtOcc;
+    const vals = {title:t, time:$('eTime').value||'', memo:$('eMemo').value.trim(),
+                  color:evtEdit.color, remind:evtEdit.remind};
+    if(newDate !== evtOcc){
+      evtSrc.exdates = (evtSrc.exdates||[]).concat(evtOcc);
+      if(evtSrc.overrides) delete evtSrc.overrides[evtOcc];
+      events.push(Object.assign({id:uid(), date:newDate, repeat:'', until:'', dates:[]}, vals));
+      calDay = newDate; calMonth = newDate.slice(0,7);
+    }else{
+      evtSrc.overrides = evtSrc.overrides || {};
+      evtSrc.overrides[evtOcc] = vals;
+    }
+    $('evtModal').hidden = true; renderCal(); renderHome(); queueSave();
+    flash('이 날 일정만 고쳤어요');
+    return;
+  }
+
   evtEdit.title = t;
   evtEdit.date = $('eDate').value || calDay;
   evtEdit.time = $('eTime').value || '';
