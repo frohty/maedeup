@@ -212,9 +212,10 @@
   <label class="ghost">백업 파일 가져오기
     <input type="file" accept=".json,application/json" id="fileImport" style="position:absolute;inset:0;width:100%;height:100%;opacity:0">
   </label>
+  <div class="hint" id="usage" style="margin-top:10px"></div>
   <div class="hint">재료 목록만 보내면 상대는 내 단가만 받고, 작품 기록은 넘어가지 않아요. 가져오기는 어떤 파일인지 알아서 구분합니다.</div>
 
-  <div class="ver">매듭기록장 · v39</div>
+  <div class="ver">매듭기록장 · v41</div>
 </section>
 
 <!-- ═══ 작품 목록 ═══ -->
@@ -597,7 +598,7 @@
 <div class="toast" id="toast"></div>
 
 <script>
-const MAX_PHOTOS = 5;
+const MAX_PHOTOS = 9999;   /* 사실상 제한 없음 */
 const KEY = 'maedeup-record';
 const UNITS = ['m','개','cm','g','장'];
 const $ = id => document.getElementById(id);
@@ -710,15 +711,57 @@ function resolved(m){
 }
 
 /* ── 저장 ── */
+/* 저장은 넉넉한 IndexedDB에, 안 되면 예전 방식으로 */
+const DB_NAME = 'maedeup-db', STORE = 'kv';
+function openDB(){
+  return new Promise((res, rej)=>{
+    const r = indexedDB.open(DB_NAME, 1);
+    r.onupgradeneeded = () => { r.result.createObjectStore(STORE); };
+    r.onsuccess = () => res(r.result);
+    r.onerror = () => rej(r.error);
+  });
+}
+function idbGet(k){
+  return openDB().then(db => new Promise((res, rej)=>{
+    const q = db.transaction(STORE,'readonly').objectStore(STORE).get(k);
+    q.onsuccess = () => res(q.result); q.onerror = () => rej(q.error);
+  }));
+}
+function idbSet(k, v){
+  return openDB().then(db => new Promise((res, rej)=>{
+    const tx = db.transaction(STORE,'readwrite');
+    tx.objectStore(STORE).put(v, k);
+    tx.oncomplete = () => res(true); tx.onerror = () => rej(tx.error);
+  }));
+}
+function snapshot(){
+  return {works, lib, menu, sortBy, sales, libSort, saleSort, events, money, calRange};
+}
+let saveWarned = false;
 async function save(){
-  const payload = JSON.stringify({works, lib, menu, sortBy, sales, libSort, saleSort, events, money, calRange});
-  try { localStorage.setItem(KEY, payload); return; } catch(e){}
-  try { await window.storage.set(KEY, payload); } catch(e){}
+  const data = snapshot();
+  try { await idbSet('state', data); saveWarned = false; showUsage(); return; } catch(e){}
+  try { localStorage.setItem(KEY, JSON.stringify(data)); saveWarned = false; showUsage(); return; } catch(e){}
+  try { await window.storage.set(KEY, JSON.stringify(data)); return; } catch(e){}
+  if(!saveWarned){
+    saveWarned = true;
+    flash('저장하지 못했어요 · 백업 파일을 받아두세요');
+  }
 }
 async function load(){
-  try { const t = localStorage.getItem(KEY); if(t) return JSON.parse(t); } catch(e){}
+  try { const v = await idbGet('state'); if(v) return v; } catch(e){}
+  try { const t = localStorage.getItem(KEY); if(t){ const d = JSON.parse(t); setTimeout(save, 800); return d; } } catch(e){}
   try { const r = await window.storage.get(KEY); if(r) return JSON.parse(r.value); } catch(e){}
   return null;
+}
+/* 쓴 공간 표시 */
+async function showUsage(){
+  const el = $('usage'); if(!el) return;
+  try{
+    const est = await navigator.storage.estimate();
+    const mb = (est.usage||0)/1048576;
+    el.textContent = '지금까지 쓴 공간 ' + (mb < 1 ? mb.toFixed(2) : mb.toFixed(1)) + 'MB';
+  }catch(e){ el.textContent = ''; }
 }
 let saveTimer;
 const queueSave = () => { clearTimeout(saveTimer); saveTimer = setTimeout(save, 400); };
@@ -837,6 +880,7 @@ $('backHome7').addEventListener('click', openHome);
 
 /* ── 홈 ── */
 function renderHome(){
+  showUsage();
   $('menu').innerHTML = menu.map((m,i)=>{
     const sub = m.key==='lib' ? '등록된 재료 '+lib.length+'개'
               : m.key==='sales' ? '이번 달 '+monthSales(ym(new Date())).length+'건'
@@ -1244,7 +1288,7 @@ function renderPhotos(){
   }
   $('photoHint').textContent = S.photos.length > 1
     ? "맨 앞 사진이 작품 목록 썸네일이 됩니다. 다른 사진은 '대표로'를 누르세요."
-    : '사진 칸을 누르면 촬영할지 앨범에서 고를지 고를 수 있어요 · 최대 '+MAX_PHOTOS+'장';
+    : '사진 칸을 누르면 촬영할지 앨범에서 고를지 고를 수 있어요';
 }
 $('shots').addEventListener('click', e=>{
   const rep = e.target.closest('[data-rep]'), del = e.target.closest('[data-del]'), add = e.target.closest('#btnAddPhoto');
@@ -1810,7 +1854,9 @@ async function addReceipt(files){
   const list = Array.from(files||[]);
   if(!list.length) return;
   try{
-    const added = await Promise.all(list.slice(0, 3-(mEdit.photos||[]).length).map(f=>shrink(f)));
+    const room = MAX_PHOTOS - (mEdit.photos||[]).length;
+    if(room <= 0){ flash('영수증은 '+MAX_PHOTOS+'장까지 넣을 수 있어요'); return; }
+    const added = await Promise.all(list.slice(0, room).map(f=>shrink(f)));
     mEdit.photos = (mEdit.photos||[]).concat(added); moneyChips();
   }catch(e){ flash('사진을 불러오지 못했습니다'); }
 }
