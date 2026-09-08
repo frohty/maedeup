@@ -215,7 +215,7 @@
   <div class="hint" id="usage" style="margin-top:10px"></div>
   <div class="hint">재료 목록만 보내면 상대는 내 단가만 받고, 작품 기록은 넘어가지 않아요. 가져오기는 어떤 파일인지 알아서 구분합니다.</div>
 
-  <div class="ver">매듭기록장 · v41</div>
+  <div class="ver">매듭기록장 · v42</div>
 </section>
 
 <!-- ═══ 작품 목록 ═══ -->
@@ -537,7 +537,7 @@
 <div class="modal" id="saleModal" hidden>
   <div class="sheet">
     <div class="grab"></div>
-    <div class="head"><span class="cap">판매 등록</span></div>
+    <div class="head"><span class="cap" id="saleCap">판매 등록</span><button class="link" id="saleDel" style="color:var(--rose)" hidden>삭제</button></div>
 
     <div class="row" style="align-items:flex-end;gap:10px">
       <div style="flex:1">
@@ -1660,10 +1660,13 @@ $('saleSorts').addEventListener('click', e=>{
 });
 $('salesList').addEventListener('click', e=>{
   const row = e.target.closest('.sale'); if(!row) return;
-  if(!e.target.closest('[data-x]')) return;
-  if(!askDelete('이 판매 기록')) return;
-  sales = sales.filter(x=>x.id!==row.dataset.id);
-  renderSales(); renderHome(); queueSave();
+  const sale = sales.find(x=>x.id===row.dataset.id);
+  if(e.target.closest('[data-x]')){
+    if(!askDelete('이 판매 기록')) return;
+    sales = sales.filter(x=>x.id!==row.dataset.id);
+    renderSales(); renderHome(); queueSave(); return;
+  }
+  if(sale) openSaleForm(sale);
 });
 
 /* ── 작품 기록 목록 ── */
@@ -1796,14 +1799,20 @@ $('moneyView').addEventListener('click', e=>{
   const c = e.target.closest('[data-md]');
   if(c){ mDay = c.dataset.md; renderMoney(); return; }
   const row = e.target.closest('.evt'); if(!row) return;
-  const it = money.find(x=>x.id===row.dataset.id);
-  if(it) openMoneyForm(it); else flash('판매 기록에서 고쳐주세요');
+  moneyRowTap(row.dataset.id);
 });
 $('mDayList').addEventListener('click', e=>{
   const row = e.target.closest('.evt'); if(!row) return;
-  const it = money.find(x=>x.id===row.dataset.id);
-  if(it) openMoneyForm(it); else flash('판매 기록에서 고쳐주세요');
+  moneyRowTap(row.dataset.id);
 });
+function moneyRowTap(id){
+  const it = money.find(x=>x.id===id);
+  if(it){ openMoneyForm(it); return; }
+  if(String(id).indexOf('sale-') === 0){
+    const sale = sales.find(x=>('sale-'+x.id) === id);
+    if(sale) openSaleForm(sale);
+  }
+}
 $('nPrev').addEventListener('click', ()=>{ const d=new Date(Number(mMonth.slice(0,4)), Number(mMonth.slice(5,7))-2, 1); mMonth=ym(d); renderMoney(); });
 $('nNext').addEventListener('click', ()=>{ const d=new Date(Number(mMonth.slice(0,4)), Number(mMonth.slice(5,7)), 1); mMonth=ym(d); renderMoney(); });
 $('nNow').addEventListener('click', ()=>{ mMonth = ym(new Date()); mDay = today(); renderMoney(); });
@@ -2205,8 +2214,9 @@ function renderMaking(){
 }
 $('makingList').addEventListener('click', e=>{
   const row = e.target.closest('.todo'); if(!row) return;
-  if(!e.target.closest('[data-done]')) return;
-  const x = sales.find(v=>v.id===row.dataset.id); if(!x) return;
+  const s0 = sales.find(v=>v.id===row.dataset.id);
+  if(!e.target.closest('[data-done]')){ if(s0) openSaleForm(s0); return; }
+  const x = s0; if(!x) return;
   x.status = 'done';
   renderMaking(); renderHome(); queueSave(); flash('발송완료로 바꿨어요');
 });
@@ -2219,20 +2229,45 @@ function saleChips(){
   $('sStatus').innerHTML = [['making','제작중'],['done','발송완료']]
     .map(([k,l])=>'<button class="chip'+(saleDraft.status===k?' on':'')+'" data-st="'+k+'">'+l+'</button>').join('');
 }
-function openSaleForm(){
-  const w = cur();
-  const d = new Date();
-  saleDraft = {qty:1, status:'done', channel:'', unit:w.price||0};
-  $('sDate').value = d.getFullYear()+'-'+pad2(d.getMonth()+1)+'-'+pad2(d.getDate());
-  $('sQty').textContent = '1개';
-  $('sAmount').value = String(w.price||0);
-  $('sCustomer').value = '';
-  $('sMemo').value = '';
-  $('sDue').value = '';
+let saleEdit = null;
+function openSaleForm(sale){
+  saleEdit = sale || null;
+  if(sale){
+    saleDraft = {qty:n(sale.qty)||1, status:sale.status||'done', channel:sale.channel||'',
+                 unit: (n(sale.amount) / (n(sale.qty)||1)) || 0};
+    $('sDate').value = sale.date || today();
+    $('sQty').textContent = saleDraft.qty+'개';
+    $('sAmount').value = String(n(sale.amount));
+    $('sCustomer').value = sale.customer || '';
+    $('sMemo').value = sale.memo || '';
+    $('sDue').value = sale.due || '';
+    $('saleCap').textContent = esc(sale.name || '판매') + ' 고치기';
+    $('saleDel').hidden = false;
+  }else{
+    const w = cur();
+    saleDraft = {qty:1, status:'done', channel:'', unit:w.price||0};
+    $('sDate').value = today();
+    $('sQty').textContent = '1개';
+    $('sAmount').value = String(w.price||0);
+    $('sCustomer').value = '';
+    $('sMemo').value = '';
+    $('sDue').value = '';
+    $('saleCap').textContent = '판매 등록';
+    $('saleDel').hidden = true;
+  }
   saleChips();
   $('saleModal').hidden = false;
 }
-$('btnSale').addEventListener('click', openSaleForm);
+$('btnSale').addEventListener('click', ()=>openSaleForm(null));
+$('saleDel').addEventListener('click', ()=>{
+  if(!saleEdit) return;
+  if(!askDelete('이 판매 기록')) return;
+  sales = sales.filter(x=>x.id!==saleEdit.id);
+  $('saleModal').hidden = true;
+  if(!$('viewSales').hidden) renderSales();
+  if(!$('viewMaking').hidden) renderMaking();
+  saleSummary(); renderHome(); queueSave();
+});
 $('closeSale').addEventListener('click', ()=>{ $('saleModal').hidden = true; });
 $('saleModal').addEventListener('click', e=>{ if(e.target.id==='saleModal') $('saleModal').hidden = true; });
 function setSaleQty(v){
@@ -2255,22 +2290,33 @@ $('sStatus').addEventListener('click', e=>{
   saleDraft.status = b.dataset.st; saleChips();
 });
 $('saveSale').addEventListener('click', ()=>{
-  const w = cur();
-  sales.unshift({
-    id: uid(), workId: w.id,
-    name: (S.title||'').trim() || '이름 없는 작품',
-    date: $('sDate').value || ym(new Date())+'-01',
+  const vals = {
+    date: $('sDate').value || today(),
     qty: saleDraft.qty,
     amount: n($('sAmount').value),
-    cost: w.cost||0,
     customer: $('sCustomer').value.trim(),
     channel: saleDraft.channel,
     status: saleDraft.status,
     due: $('sDue').value || '',
     memo: $('sMemo').value.trim()
-  });
+  };
+  if(saleEdit){
+    Object.assign(saleEdit, vals);
+    flash('고쳤어요');
+  }else{
+    const w = cur();
+    sales.unshift(Object.assign({
+      id: uid(), workId: w.id,
+      name: (S.title||'').trim() || '이름 없는 작품',
+      cost: w.cost||0
+    }, vals));
+    flash('판매 기록에 저장했어요');
+  }
   $('saleModal').hidden = true;
-  saleSummary(); queueSave(); flash('판매 기록에 저장했어요');
+  if(!$('viewSales').hidden) renderSales();
+  if(!$('viewMaking').hidden) renderMaking();
+  if(!$('viewMoney').hidden) renderMoney();
+  saleSummary(); renderHome(); queueSave();
 });
 function saleSummary(){
   const w = cur(); if(!w) return;
