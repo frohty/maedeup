@@ -181,6 +181,10 @@
   #viewWork{display:flex;flex-direction:column}
   body.rec .sum, body.rec .each, body.rec .buyinfo{display:none !important}
   #photoModal{background:rgba(16,13,26,.92);align-items:center;z-index:60}
+  #cropModal{background:rgba(16,13,26,.95);align-items:center;z-index:70}
+  #cropBox{position:relative;width:86vw;max-width:440px;height:86vw;max-height:440px;overflow:hidden;border-radius:18px;background:#000;touch-action:none}
+  #cropImg{position:absolute;transform-origin:0 0;max-width:none;user-select:none;pointer-events:none}
+  .matthumb{width:40px;height:40px;flex:0 0 auto;border-radius:11px;border:1px solid var(--line);background-size:cover;background-position:center}
   .viewer{width:100%;max-width:560px;padding:16px;display:flex;flex-direction:column;align-items:center;gap:12px}
   .viewer .frame{width:100%;overflow:auto;border-radius:18px;background:#000;display:flex;align-items:center;justify-content:center}
   .viewer img{max-width:100%;max-height:70vh;display:block;transition:transform .2s;transform-origin:center}
@@ -215,7 +219,7 @@
   <div class="hint" id="usage" style="margin-top:10px"></div>
   <div class="hint">재료 목록만 보내면 상대는 내 단가만 받고, 작품 기록은 넘어가지 않아요. 가져오기는 어떤 파일인지 알아서 구분합니다.</div>
 
-  <div class="ver">매듭기록장 · v43</div>
+  <div class="ver">매듭기록장 · v44</div>
 </section>
 
 <!-- ═══ 작품 목록 ═══ -->
@@ -431,6 +435,19 @@
   </div>
 </section>
 
+
+<div class="modal" id="cropModal" hidden>
+  <div class="viewer">
+    <div style="color:#fff;font-size:13px;opacity:.8">넣을 범위를 정하세요 · 끌어서 옮기고 아래로 크기 조절</div>
+    <div id="cropBox"><img id="cropImg" alt=""></div>
+    <input type="range" id="cropZoom" min="100" max="300" value="100" style="width:100%;accent-color:#6C5B8C">
+    <div class="vbar">
+      <button id="cropSkip" style="flex:1">전체 넣기</button>
+      <button id="cropOK" style="flex:1.2;background:#6C5B8C">이대로 넣기</button>
+      <button id="cropCancel" style="flex:1">취소</button>
+    </div>
+  </div>
+</div>
 
 <div class="modal" id="photoModal" hidden>
   <div class="viewer">
@@ -1134,7 +1151,7 @@ $('libs').addEventListener('change', async e=>{
   const files = Array.from(e.target.files||[]); e.target.value = '';
   if(!l || !files.length) return;
   try{
-    const added = await Promise.all(files.map(f=>shrink(f)));
+    const added = await pickPhotos(files);
     l.photos = (l.photos||[]).concat(added);
     renderLib(); queueSave();
   }catch(err){ flash('사진을 불러오지 못했습니다'); }
@@ -1206,6 +1223,9 @@ function renderMats(){
     el.className = 'mat'; el.dataset.id = m.id;
     let html =
       '<div class="row" style="margin-bottom:8px">' +
+        (lrec && (lrec.photos||[]).length
+          ? '<button class="matthumb" data-mpic="'+lrec.id+'" style="background-image:url('+lrec.photos[0]+')"></button>'
+          : '') +
         '<select class="wide" data-f="libId">' +
           '<option value=""'+(m.libId?'':' selected')+'>재료 선택</option>' +
           lib.map(l=>'<option value="'+l.id+'"'+(l.id===m.libId?' selected':'')+'>'+esc(l.name||'(이름 없음)')+'</option>').join('') +
@@ -1297,7 +1317,7 @@ async function addPhotos(files){
   const room = MAX_PHOTOS - S.photos.length;
   if(room <= 0){ flash('사진은 '+MAX_PHOTOS+'장까지 넣을 수 있어요'); return; }
   try{
-    const added = await Promise.all(list.slice(0,room).map(f=>shrink(f)));
+    const added = await pickPhotos(list.slice(0,room));
     S.photos = S.photos.concat(added);
     $('pick').hidden = true;
     renderPhotos(); queueSave();
@@ -1526,6 +1546,105 @@ function calc(){
   $('legend').innerHTML = bands.map(b=>'<div><span class="dot" style="background:'+b[2]+'"></span>'+b[0]+'<b>'+won(b[1])+'</b></div>').join('');
 }
 
+/* ── 사진 넣기: 범위 고르기 ── */
+let cropImg = null, cropScale = 1, cropBase = 1, cropX = 0, cropY = 0, cropDone = null, cropFile = null;
+function cropSize(){ return $('cropBox').clientWidth; }
+function cropDraw(){
+  const el = $('cropImg');
+  el.style.width = (cropImg.width * cropScale) + 'px';
+  el.style.height = (cropImg.height * cropScale) + 'px';
+  el.style.left = cropX + 'px';
+  el.style.top = cropY + 'px';
+}
+function cropClamp(){
+  const B = cropSize();
+  const w = cropImg.width * cropScale, h = cropImg.height * cropScale;
+  cropX = Math.min(0, Math.max(B - w, cropX));
+  cropY = Math.min(0, Math.max(B - h, cropY));
+}
+/* 파일 하나를 받아 (잘라서) 사진 데이터로 */
+function pickOne(file){
+  return new Promise((resolve)=>{
+    const fr = new FileReader();
+    fr.onload = () => {
+      const img = new Image();
+      img.onload = () => {
+        cropImg = img; cropFile = file; cropDone = resolve;
+        const B = cropSize() || 380;
+        cropBase = Math.max(B/img.width, B/img.height);
+        cropScale = cropBase;
+        cropX = (B - img.width*cropScale)/2;
+        cropY = (B - img.height*cropScale)/2;
+        $('cropImg').src = fr.result;
+        $('cropZoom').value = 100;
+        $('cropModal').hidden = false;
+        setTimeout(()=>{ const B2 = cropSize(); if(B2 && B2 !== B){
+          cropBase = Math.max(B2/img.width, B2/img.height); cropScale = cropBase;
+          cropX = (B2 - img.width*cropScale)/2; cropY = (B2 - img.height*cropScale)/2;
+        } cropDraw(); }, 30);
+        cropDraw();
+      };
+      img.onerror = () => resolve(null);
+      img.src = fr.result;
+    };
+    fr.onerror = () => resolve(null);
+    fr.readAsDataURL(file);
+  });
+}
+$('cropZoom').addEventListener('input', e=>{
+  const B = cropSize();
+  const cx = B/2, cy = B/2;
+  const old = cropScale;
+  cropScale = cropBase * (Number(e.target.value)/100);
+  cropX = cx - (cx - cropX) * (cropScale/old);
+  cropY = cy - (cy - cropY) * (cropScale/old);
+  cropClamp(); cropDraw();
+});
+(function(){
+  let dragging = false, px = 0, py = 0;
+  const box = $('cropBox');
+  box.addEventListener('pointerdown', e=>{ dragging = true; px = e.clientX; py = e.clientY; box.setPointerCapture(e.pointerId); });
+  box.addEventListener('pointermove', e=>{
+    if(!dragging) return;
+    cropX += e.clientX - px; cropY += e.clientY - py;
+    px = e.clientX; py = e.clientY;
+    cropClamp(); cropDraw();
+  });
+  box.addEventListener('pointerup', ()=>{ dragging = false; });
+  box.addEventListener('pointercancel', ()=>{ dragging = false; });
+})();
+$('cropOK').addEventListener('click', ()=>{
+  const B = cropSize(), out = 1000;
+  const c = document.createElement('canvas');
+  c.width = out; c.height = out;
+  const g = c.getContext('2d');
+  g.drawImage(cropImg, -cropX/cropScale, -cropY/cropScale, B/cropScale, B/cropScale, 0, 0, out, out);
+  $('cropModal').hidden = true;
+  const res = cropDone; cropDone = null;
+  if(res) res(c.toDataURL('image/jpeg', 0.72));
+});
+$('cropSkip').addEventListener('click', async ()=>{
+  $('cropModal').hidden = true;
+  const res = cropDone; cropDone = null;
+  const data = await shrink(cropFile);
+  if(res) res(data);
+});
+$('cropCancel').addEventListener('click', ()=>{
+  $('cropModal').hidden = true;
+  const res = cropDone; cropDone = null;
+  if(res) res(null);
+});
+/* 여러 장이면 한 장씩 차례로 */
+async function pickPhotos(files, limit){
+  const out = [];
+  const list = Array.from(files||[]).slice(0, limit || 99);
+  for(const f of list){
+    const data = await pickOne(f);
+    if(data) out.push(data);
+  }
+  return out;
+}
+
 /* ── 사진 크게 보기 ── */
 let photoIdx = 0;
 let viewMode = 'work';   /* 'work' = 작품 사진, 'receipt' = 영수증 */
@@ -1588,6 +1707,12 @@ function renderColorGrid(){
   }).join('') || '<div class="hint" style="grid-column:1/-1;margin:0">찾는 색이 없어요. 칸에 직접 적어도 됩니다.</div>';
 }
 $('mats').addEventListener('click', e=>{
+  const mp = e.target.closest('[data-mpic]');
+  if(mp){
+    libOpen = mp.dataset.mpic;
+    viewMode = 'lib'; showPhoto(0); $('photoModal').hidden = false;
+    return;
+  }
   const b = e.target.closest('[data-pick]'); if(!b) return;
   colorTarget = e.target.closest('.mat').dataset.id;
   $('colorSearch').value = '';
@@ -1903,7 +2028,7 @@ async function addReceipt(files){
   try{
     const room = MAX_PHOTOS - (mEdit.photos||[]).length;
     if(room <= 0){ flash('영수증은 '+MAX_PHOTOS+'장까지 넣을 수 있어요'); return; }
-    const added = await Promise.all(list.slice(0, room).map(f=>shrink(f)));
+    const added = await pickPhotos(list.slice(0, room));
     mEdit.photos = (mEdit.photos||[]).concat(added); moneyChips();
   }catch(e){ flash('사진을 불러오지 못했습니다'); }
 }
