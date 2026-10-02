@@ -223,7 +223,7 @@
   <div class="hint" id="usage" style="margin-top:10px"></div>
   <div class="hint">재료 목록만 보내면 상대는 내 단가만 받고, 작품 기록은 넘어가지 않아요. 가져오기는 어떤 파일인지 알아서 구분합니다.</div>
 
-  <div class="ver">매듭기록장 · v45</div>
+  <div class="ver">매듭기록장 · v47</div>
 </section>
 
 <!-- ═══ 작품 목록 ═══ -->
@@ -684,6 +684,21 @@ const PALETTES = [
 ];
 /* 실 굵기 숫자로 종류를 정합니다: 0.8 플랫 / 0.5 믹스 / 0.45·0.65 라운드 */
 const BY_SIZE = {'0.8':'flat40', '0.5':'mix6', '0.45':'round20', '0.65':'round20'};
+/* 이름으로 분류 추측 — 실버·실리콘처럼 다른 말에 붙은 '실'은 제외 */
+const GROUPS = [['thread','실·끈'],['pack','포장재'],['other','부자재·기타']];
+function guessGroup(name){
+  const t = String(name||'');
+  if(/포장|박스|상자|파우치|봉투|지퍼백|택배|완충|뽁뽁이|리본|쇼핑백|스티커|카드|보증서|케이스/.test(t)) return 'pack';
+  if(/실버|실리콘|실링|실크/.test(t)) return 'other';
+  if(/왁스실|라운드실|믹스실|플랫실|면실|명주실|자수실|나일론실|가죽끈|우동끈|끈|로프|코드/.test(t)) return 'thread';
+  if(/\d*\.?\d*\s*mm.*실|실$/.test(t)) return 'thread';
+  return 'other';
+}
+function normalizeGroups(){
+  let touched = false;
+  lib.forEach(l=>{ if(!l.group){ l.group = guessGroup(l.name); touched = true; } });
+  if(touched) queueSave();
+}
 function guessPalette(name){
   const t = String(name||'');
   const hit = t.match(/(\d*\.\d+)/);
@@ -1095,6 +1110,13 @@ function libRow(l, i, canMove){
         '<select data-f="unit">'+UNITS.map(u=>'<option'+(u===l.unit?' selected':'')+'>'+u+'</option>').join('')+'</select>' +
       '</div>' +
       '<div class="row" style="margin-bottom:10px">' +
+        '<span style="font-size:12px;color:var(--sub);flex:0 0 auto">분류</span>' +
+        '<select data-f="group" style="flex:1">' +
+          GROUPS.map(([k,lb])=>
+            '<option value="'+k+'"'+((l.group||guessGroup(l.name))===k?' selected':'')+'>'+lb+'</option>').join('') +
+        '</select>' +
+      '</div>' +
+      '<div class="row" style="margin-bottom:10px">' +
         '<span style="font-size:12px;color:var(--sub);flex:0 0 auto">색상표</span>' +
         '<select data-f="palette" style="flex:1">' +
           PALETTES.map(([k,lb])=>'<option value="'+k+'"'+((l.palette||'none')===k?' selected':'')+'>'+lb+'</option>').join('') +
@@ -1126,12 +1148,10 @@ function renderLib(){
   if(!rows.length){ box.innerHTML = '<div class="hint" style="margin:0">찾는 재료가 없어요.</div>'; return; }
 
   const canMove = libSort==='mine' && !q;
-  /* 이름에 '실' 또는 '끈'이 들어가면 실 그룹 */
-  const isThread = l => /실|끈/.test(l.name||'');
-  const groups = [
-    ['thread','실·끈', rows.filter(({l})=>isThread(l))],
-    ['other','부자재·기타', rows.filter(({l})=>!isThread(l))]
-  ].filter(g=>g[2].length);
+  const gOf = l => l.group || guessGroup(l.name);
+  const groups = GROUPS
+    .map(([k,lb])=>[k, lb, rows.filter(({l})=>gOf(l)===k)])
+    .filter(g=>g[2].length);
 
   box.innerHTML = groups.map(([key,label,items])=>{
     const closed = !!libClosed[key];
@@ -1156,7 +1176,13 @@ function libChanged(e){
     const sel = el.querySelector('[data-f="palette"]');
     if(sel) sel.value = l.palette;
   }
+  if(f==='name' && !l.groupSet){
+    l.group = guessGroup(l.name);
+    const sel2 = el.querySelector('[data-f="group"]');
+    if(sel2) sel2.value = l.group;
+  }
   if(f==='palette') l.paletteSet = true;
+  if(f==='group'){ l.groupSet = true; renderLib(); }
   if(f==='name' || f==='unit' || f==='palette') renderMats();
   queueSave();
 }
@@ -1220,7 +1246,7 @@ $('libs').addEventListener('click', e=>{
   renderLib(); renderMats(); queueSave();
 });
 $('btnLibAdd').addEventListener('click', ()=>{
-  const item = {id:uid(), name:'', unit:'m', cost:'', qty:'', palette:'none'};
+  const item = {id:uid(), name:'', unit:'m', cost:'', qty:'', palette:'none', group:'other'};
   lib.push(item); libOpen = item.id; $('libSearch').value = '';
   renderLib(); renderMats(); queueSave();
 });
@@ -2825,7 +2851,7 @@ $('fileImport').addEventListener('change', e=>{
 (async ()=>{
   const saved = await load();
   if(saved && saved.lib) lib = saved.lib;
-  normalizeLib();
+  normalizeLib(); normalizeGroups();
   if(saved && saved.sortBy) sortBy = saved.sortBy;
   if(saved && saved.sales) sales = saved.sales;
   if(saved && saved.events) events = saved.events;
