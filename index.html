@@ -183,7 +183,11 @@
   #photoModal{background:rgba(16,13,26,.92);align-items:center;z-index:60}
   #cropModal{background:rgba(16,13,26,.95);align-items:center;z-index:70}
   #cropBox{position:relative;width:86vw;max-width:440px;height:86vw;max-height:440px;overflow:hidden;border-radius:18px;background:#000;touch-action:none}
-  #cropImg{position:absolute;transform-origin:0 0;max-width:none;user-select:none;pointer-events:none}
+  #cropImg{position:absolute;transform-origin:0 0;max-width:none !important;max-height:none !important;user-select:none;pointer-events:none}
+  #cropGuide{position:absolute;inset:0;pointer-events:none;border:2px solid rgba(255,255,255,.95);border-radius:18px;
+    box-shadow:0 0 0 2000px rgba(0,0,0,.35) inset}
+  #cropGuide i{position:absolute;background:rgba(255,255,255,.45)}
+  #cropGuide i.v{top:0;bottom:0;width:1px} #cropGuide i.h{left:0;right:0;height:1px}
   .matthumb{width:40px;height:40px;flex:0 0 auto;border-radius:11px;border:1px solid var(--line);background-size:cover;background-position:center}
   .viewer{width:100%;max-width:560px;padding:16px;display:flex;flex-direction:column;align-items:center;gap:12px}
   .viewer .frame{width:100%;overflow:auto;border-radius:18px;background:#000;display:flex;align-items:center;justify-content:center}
@@ -219,7 +223,7 @@
   <div class="hint" id="usage" style="margin-top:10px"></div>
   <div class="hint">재료 목록만 보내면 상대는 내 단가만 받고, 작품 기록은 넘어가지 않아요. 가져오기는 어떤 파일인지 알아서 구분합니다.</div>
 
-  <div class="ver">매듭기록장 · v44</div>
+  <div class="ver">매듭기록장 · v45</div>
 </section>
 
 <!-- ═══ 작품 목록 ═══ -->
@@ -438,8 +442,10 @@
 
 <div class="modal" id="cropModal" hidden>
   <div class="viewer">
-    <div style="color:#fff;font-size:13px;opacity:.8">넣을 범위를 정하세요 · 끌어서 옮기고 아래로 크기 조절</div>
-    <div id="cropBox"><img id="cropImg" alt=""></div>
+    <div style="color:#fff;font-size:13px;opacity:.8">흰 네모 안이 실제로 저장되는 범위예요 · 끌어서 옮기고 아래로 크기 조절</div>
+    <div id="cropBox"><img id="cropImg" alt="">
+      <div id="cropGuide"><i class="v" style="left:33.3%"></i><i class="v" style="left:66.6%"></i><i class="h" style="top:33.3%"></i><i class="h" style="top:66.6%"></i></div>
+    </div>
     <input type="range" id="cropZoom" min="100" max="300" value="100" style="width:100%;accent-color:#6C5B8C">
     <div class="vbar">
       <button id="cropSkip" style="flex:1">전체 넣기</button>
@@ -463,6 +469,16 @@
       <button id="pClose" style="flex:1">닫기</button>
     </div>
     <div style="font-size:11.5px;color:rgba(255,255,255,.6)">사진을 누르면 크게·작게 볼 수 있어요</div>
+  </div>
+</div>
+
+<div class="modal" id="matPickModal" hidden>
+  <div class="sheet">
+    <div class="grab"></div>
+    <div class="head"><span class="cap">재료 고르기</span><button class="link" id="matPickDirect">직접 입력</button></div>
+    <input type="text" id="matPickSearch" placeholder="재료 이름으로 찾기">
+    <div id="matPickList" style="margin-top:10px"></div>
+    <button class="ghost" id="matPickClose">닫기</button>
   </div>
 </div>
 
@@ -1055,8 +1071,10 @@ let libClosed = {};
 function libRow(l, i, canMove){
   const unitPrice = n(l.qty)>0 ? esc(l.unit)+'당 '+perUnit(n(l.cost)/n(l.qty))+'원' : '단가 미입력';
   const open = libOpen === l.id;
+  const pic = (l.photos||[])[0];
   let h = '<div class="libitem" data-id="'+l.id+'">' +
     '<div class="libhead">' +
+      (pic ? '<span class="matthumb" style="width:34px;height:34px;background-image:url('+pic+')"></span>' : '') +
       '<span class="lname">'+(esc(l.name) || '이름 없음')+'</span>' +
       '<span class="lunit">'+unitPrice+'</span>' +
       (canMove
@@ -1226,11 +1244,9 @@ function renderMats(){
         (lrec && (lrec.photos||[]).length
           ? '<button class="matthumb" data-mpic="'+lrec.id+'" style="background-image:url('+lrec.photos[0]+')"></button>'
           : '') +
-        '<select class="wide" data-f="libId">' +
-          '<option value=""'+(m.libId?'':' selected')+'>재료 선택</option>' +
-          lib.map(l=>'<option value="'+l.id+'"'+(l.id===m.libId?' selected':'')+'>'+esc(l.name||'(이름 없음)')+'</option>').join('') +
-          '<option value="direct"'+(m.libId==='direct'?' selected':'')+'>직접 입력</option>' +
-        '</select>' +
+        '<button class="wide" data-libpick style="flex:1;text-align:left;border:1px solid var(--line);background:#FBFAFD;border-radius:12px;padding:11px 12px;font-size:15px;font-weight:600;color:'+(m.libId?'var(--ink)':'var(--sub)')+'">' +
+          esc(picked ? (lrec.name||'(이름 없음)') : (direct ? '직접 입력' : '재료 선택')) +
+        '</button>' +
         '<button class="x" data-x>×</button>' +
       '</div>' +
       (m.libId
@@ -1545,6 +1561,49 @@ function calc(){
   $('band').innerHTML = bands.map(b=>'<i style="width:'+(price>0?b[1]/price*100:0)+'%;background:'+b[2]+'"></i>').join('');
   $('legend').innerHTML = bands.map(b=>'<div><span class="dot" style="background:'+b[2]+'"></span>'+b[0]+'<b>'+won(b[1])+'</b></div>').join('');
 }
+
+/* ── 재료 고르기 (사진이 보이는 목록) ── */
+let matPickId = null;
+function renderMatPick(){
+  const q = ($('matPickSearch').value||'').trim();
+  const rows = lib.filter(l=> !q || (l.name||'').indexOf(q) >= 0);
+  const cur2 = S.materials.find(x=>x.id===matPickId) || {};
+  $('matPickList').innerHTML = rows.length ? rows.map(l=>{
+    const pic = (l.photos||[])[0];
+    const unit = n(l.qty)>0 ? esc(l.unit)+'당 '+perUnit(n(l.cost)/n(l.qty))+'원' : '단가 미입력';
+    return '<div class="evt" data-lp="'+l.id+'"'+(cur2.libId===l.id?' style="background:#F3F0F8;border-radius:12px"':'')+'>' +
+      '<span class="thumb" style="width:46px;height:46px;border-radius:12px">' +
+        (pic ? '<img src="'+pic+'" alt="">' : '<svg width="16" height="16" viewBox="0 0 24 24" fill="none"><rect x="2.5" y="5.5" width="19" height="14" rx="3" stroke="#6E668A" stroke-width="1.6"/><circle cx="12" cy="12.5" r="3.6" stroke="#6E668A" stroke-width="1.6"/></svg>') +
+      '</span>' +
+      '<span style="flex:1;min-width:0">' +
+        '<span style="font-size:15px;font-weight:700">'+esc(l.name||'(이름 없음)')+'</span><br>' +
+        '<span style="font-size:11.5px;color:var(--sub)">'+unit+'</span>' +
+      '</span></div>';
+  }).join('') : '<div class="hint" style="margin:0">찾는 재료가 없어요. 재료 목록에서 먼저 등록하세요.</div>';
+}
+$('mats').addEventListener('click', e=>{
+  const b = e.target.closest('[data-libpick]'); if(!b) return;
+  matPickId = e.target.closest('.mat').dataset.id;
+  $('matPickSearch').value = '';
+  renderMatPick();
+  $('matPickModal').hidden = false;
+});
+$('matPickSearch').addEventListener('input', renderMatPick);
+$('matPickList').addEventListener('click', e=>{
+  const row = e.target.closest('[data-lp]'); if(!row) return;
+  const m = S.materials.find(x=>x.id===matPickId); if(!m) return;
+  m.libId = row.dataset.lp;
+  $('matPickModal').hidden = true;
+  renderMats(); calc(); queueSave();
+});
+$('matPickDirect').addEventListener('click', ()=>{
+  const m = S.materials.find(x=>x.id===matPickId); if(!m) return;
+  m.libId = 'direct';
+  $('matPickModal').hidden = true;
+  renderMats(); calc(); queueSave();
+});
+$('matPickClose').addEventListener('click', ()=>{ $('matPickModal').hidden = true; });
+$('matPickModal').addEventListener('click', e=>{ if(e.target.id==='matPickModal') $('matPickModal').hidden = true; });
 
 /* ── 사진 넣기: 범위 고르기 ── */
 let cropImg = null, cropScale = 1, cropBase = 1, cropX = 0, cropY = 0, cropDone = null, cropFile = null;
