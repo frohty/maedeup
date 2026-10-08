@@ -188,6 +188,9 @@
   #cropGuide{position:absolute;inset:0;pointer-events:none;border:2px solid rgba(255,255,255,.95);border-radius:18px;
     box-shadow:0 0 0 2000px rgba(0,0,0,.35) inset}
   #cropGuide i{position:absolute;background:rgba(255,255,255,.45)}
+  .viewer input[type=range]{width:100%;accent-color:#6C5B8C;margin:0}
+  .slide{display:flex;justify-content:space-between;width:100%;color:#BDB6CC;font-size:12.5px;font-weight:600;margin-top:2px}
+  .slide b{color:#fff}
   #cropGuide i.v{top:0;bottom:0;width:1px} #cropGuide i.h{left:0;right:0;height:1px}
   .matthumb{width:40px;height:40px;flex:0 0 auto;border-radius:11px;border:1px solid var(--line);background-size:cover;background-position:center}
   .viewer{width:100%;max-width:560px;padding:16px;display:flex;flex-direction:column;align-items:center;gap:12px}
@@ -224,7 +227,7 @@
   <div class="hint" id="usage" style="margin-top:10px"></div>
   <div class="hint">재료 목록만 보내면 상대는 내 단가만 받고, 작품 기록은 넘어가지 않아요. 가져오기는 어떤 파일인지 알아서 구분합니다.</div>
 
-  <div class="ver">매듭기록장 · v49</div>
+  <div class="ver">매듭기록장 · v52</div>
 </section>
 
 <!-- ═══ 작품 목록 ═══ -->
@@ -233,9 +236,10 @@
   <h1 id="worksTitle">원가계산표</h1>
   <div class="card">
     <div class="head"><span class="cap">작품</span><span class="cap" id="workCount"></span></div>
+    <button class="newbtn" id="btnNew" style="margin:0 0 14px">+ 새 작품 만들기</button>
+    <div class="sorts" id="workCatFilter"></div>
     <div class="sorts" id="sorts"></div>
     <div id="works"></div>
-    <button class="newbtn" id="btnNew">+ 새 작품 만들기</button>
   </div>
 </section>
 
@@ -280,6 +284,8 @@
   <div class="card" id="workCard">
     <div class="head"><span class="cap">작품</span><button class="link" id="btnShare">공유</button></div>
     <input type="text" id="title" placeholder="예: 물결 팔찌 7칸">
+    <div style="font-size:12px;color:var(--sub);margin:12px 0 8px">종류</div>
+    <div class="sorts" id="workCats"></div>
     <div class="shots" id="shots"></div>
     <div class="pick" id="pick" hidden>
       <label>
@@ -342,8 +348,9 @@
   <h1 id="recordTitle">작품 기록</h1>
   <div class="card">
     <div class="head"><span class="cap">작품</span><span class="cap" id="recCount"></span></div>
+    <button class="newbtn" id="btnNewRec" style="margin:0 0 14px">+ 새 작품 기록하기</button>
+    <div class="sorts" id="recCats"></div>
     <div id="recordList"></div>
-    <button class="newbtn" id="btnNewRec">+ 새 작품 기록하기</button>
   </div>
   <div class="hint">여기서는 사진·재료·시간·메모만 적어요. 금액은 원가계산표에서 정합니다.</div>
 </section>
@@ -447,7 +454,17 @@
     <div id="cropBox"><img id="cropImg" alt="">
       <div id="cropGuide"><i class="v" style="left:33.3%"></i><i class="v" style="left:66.6%"></i><i class="h" style="top:33.3%"></i><i class="h" style="top:66.6%"></i></div>
     </div>
-    <input type="range" id="cropZoom" min="100" max="300" value="100" style="width:100%;accent-color:#6C5B8C">
+    <div class="vbar">
+      <button id="rotL" style="flex:1">↺ 왼쪽 90°</button>
+      <button id="rotR" style="flex:1">↻ 오른쪽 90°</button>
+      <button id="cropReset" style="flex:1">원래대로</button>
+    </div>
+    <div class="slide"><span>크기</span><b id="vZoom">100%</b></div>
+    <input type="range" id="cropZoom" min="100" max="300" value="100">
+    <div class="slide"><span>밝기</span><b id="vBright">0</b></div>
+    <input type="range" id="cropBright" min="-60" max="60" value="0">
+    <div class="slide"><span>대비</span><b id="vContrast">0</b></div>
+    <input type="range" id="cropContrast" min="-50" max="50" value="0">
     <div class="vbar">
       <button id="cropSkip" style="flex:1">전체 넣기</button>
       <button id="cropOK" style="flex:1.2;background:#6C5B8C">이대로 넣기</button>
@@ -621,6 +638,14 @@
       <button class="tab" id="tabText">글</button>
     </div>
     <img id="cardPrev" alt="공유 카드 미리보기">
+    <div id="sharePhotoWrap">
+      <div style="font-size:12px;color:var(--sub);margin:12px 0 6px">카드에 넣을 사진</div>
+      <div class="shots" id="sharePhotos" style="padding:0 0 4px"></div>
+      <div class="pick">
+        <label>새로 촬영<input type="file" accept="image/*" capture="environment" id="shareCam"></label>
+        <label>앨범에서 선택<input type="file" accept="image/*" id="shareLib"></label>
+      </div>
+    </div>
     <div id="cardEditWrap">
       <div style="font-size:12px;color:var(--sub);margin:12px 0 6px">카드에 들어갈 글 (고칠 수 있어요)</div>
       <textarea id="cardEdit" rows="5"></textarea>
@@ -748,7 +773,7 @@ const ICON = {
 const labelOf = k => { const m = menu.find(x=>x.key===k); return m ? m.label : ''; };
 
 const blank = () => ({
-  title:'', photos:[], memo:'',
+  title:'', photos:[], memo:'', cat:'',
   materials:[{id:uid(), libId:'', memo:'', name:'', unit:'m', buyCost:'', buyQty:'', used:''}],
   useLabor:true, labors:[{id:uid(), name:'매듭 작업', minutes:'', wage:''}],
   etc:[{id:uid(),name:'포장재',amount:''}],
@@ -789,7 +814,7 @@ function idbSet(k, v){
   }));
 }
 function snapshot(){
-  return {works, lib, menu, sortBy, sales, libSort, saleSort, events, money, calRange};
+  return {works, lib, menu, sortBy, sales, libSort, saleSort, events, money, calRange, catFilter};
 }
 let saveWarned = false;
 async function save(){
@@ -911,7 +936,7 @@ function openWork(id, mode){
   if(!S.count) S.count = '1';
   $('cntVal').textContent = n(S.count) + '개';
   $('pick').hidden = true;
-  renderPhotos(); renderMats(); renderLabors(); renderEtc(); renderSettings(); calc(); saleSummary();
+  renderPhotos(); renderWorkCats(); renderMats(); renderLabors(); renderEtc(); renderSettings(); calc(); saleSummary();
   applyMode();
   show('work'); mark('work', id, detailMode);
 }
@@ -1017,7 +1042,8 @@ function renderWorks(){
     return;
   }
   works.forEach(refreshWork);
-  box.innerHTML = sortedWorks().map((w,i)=>{
+  $('workCatFilter').innerHTML = catChips(catFilter);
+  box.innerHTML = byCat(sortedWorks()).map((w,i)=>{
     const shots = (w.data.photos)||[];
     const t = shots[0];
     const name = (w.data.title||'').trim() || '이름 없는 작품';
@@ -1041,6 +1067,12 @@ function renderWorks(){
       '</div></div>';
   }).join('');
 }
+function catFilterTap(e, rerender){
+  const b = e.target.closest('[data-cf]'); if(!b) return;
+  catFilter = b.dataset.cf; rerender(); queueSave();
+}
+$('workCatFilter').addEventListener('click', e=>catFilterTap(e, renderWorks));
+$('recCats').addEventListener('click', e=>catFilterTap(e, renderRecord));
 $('sorts').addEventListener('click', e=>{
   const b = e.target.closest('[data-s]'); if(!b) return;
   sortBy = b.dataset.s; renderWorks(); queueSave();
@@ -1642,6 +1674,53 @@ $('matPickModal').addEventListener('click', e=>{ if(e.target.id==='matPickModal'
 
 /* ── 사진 넣기: 범위 고르기 ── */
 let cropImg = null, cropScale = 1, cropBase = 1, cropX = 0, cropY = 0, cropDone = null, cropFile = null;
+let cropSrc = null, cropTurn = 0, cropBright = 0, cropContrast = 0;
+function cropFilter(){
+  return 'brightness('+(1 + cropBright/100)+') contrast('+(1 + cropContrast/100)+')';
+}
+/* 사진을 가운데 맞춰 처음 상태로 */
+function cropFit(){
+  const B = cropSize() || 380;
+  cropBase = Math.max(B/cropImg.width, B/cropImg.height);
+  cropScale = cropBase;
+  cropX = (B - cropImg.width*cropScale)/2;
+  cropY = (B - cropImg.height*cropScale)/2;
+  $('cropZoom').value = 100; $('vZoom').textContent = '100%';
+  cropDraw();
+}
+/* 90도씩 돌리기 — 돌린 그림을 새 원본으로 */
+function cropRotate(dir){
+  if(!cropImg) return;
+  const c = document.createElement('canvas');
+  c.width = cropImg.height; c.height = cropImg.width;
+  const g = c.getContext('2d');
+  g.translate(c.width/2, c.height/2);
+  g.rotate(dir * Math.PI/2);
+  g.drawImage(cropImg, -cropImg.width/2, -cropImg.height/2);
+  const img = new Image();
+  img.onload = () => { cropImg = img; $('cropImg').src = img.src; cropFit(); };
+  img.src = c.toDataURL('image/jpeg', 0.92);
+  cropTurn = (cropTurn + dir + 4) % 4;
+}
+$('rotL').addEventListener('click', ()=>cropRotate(-1));
+$('rotR').addEventListener('click', ()=>cropRotate(1));
+$('cropReset').addEventListener('click', ()=>{
+  cropBright = 0; cropContrast = 0; cropTurn = 0;
+  $('cropBright').value = 0; $('cropContrast').value = 0;
+  $('vBright').textContent = '0'; $('vContrast').textContent = '0';
+  if(cropSrc){
+    const img = new Image();
+    img.onload = () => { cropImg = img; $('cropImg').src = img.src; cropFit(); };
+    img.src = cropSrc;
+  }
+});
+function cropTone(){
+  $('cropImg').style.filter = cropFilter();
+  $('vBright').textContent = (cropBright>0?'+':'') + cropBright;
+  $('vContrast').textContent = (cropContrast>0?'+':'') + cropContrast;
+}
+$('cropBright').addEventListener('input', e=>{ cropBright = Number(e.target.value); cropTone(); });
+$('cropContrast').addEventListener('input', e=>{ cropContrast = Number(e.target.value); cropTone(); });
 function cropSize(){ return $('cropBox').clientWidth; }
 function cropDraw(){
   const el = $('cropImg');
@@ -1664,6 +1743,9 @@ function pickOne(file){
       const img = new Image();
       img.onload = () => {
         cropImg = img; cropFile = file; cropDone = resolve;
+        cropSrc = fr.result; cropTurn = 0; cropBright = 0; cropContrast = 0;
+        $('cropBright').value = 0; $('cropContrast').value = 0;
+        cropTone();
         const B = cropSize() || 380;
         cropBase = Math.max(B/img.width, B/img.height);
         cropScale = cropBase;
@@ -1686,6 +1768,7 @@ function pickOne(file){
   });
 }
 $('cropZoom').addEventListener('input', e=>{
+  $('vZoom').textContent = e.target.value + '%';
   const B = cropSize();
   const cx = B/2, cy = B/2;
   const old = cropScale;
@@ -1712,18 +1795,26 @@ $('cropOK').addEventListener('click', ()=>{
   const c = document.createElement('canvas');
   c.width = out; c.height = out;
   const g = c.getContext('2d');
+  try { g.filter = cropFilter(); } catch(e){}
   g.drawImage(cropImg, -cropX/cropScale, -cropY/cropScale, B/cropScale, B/cropScale, 0, 0, out, out);
   $('cropModal').hidden = true;
   const res = cropDone; cropDone = null;
   if(res) res(c.toDataURL('image/jpeg', 0.72));
 });
-$('cropSkip').addEventListener('click', async ()=>{
+$('cropSkip').addEventListener('click', ()=>{
   $('cropModal').hidden = true;
   const res = cropDone; cropDone = null;
-  const data = await shrink(cropFile);
-  if(res) res(data);
+  const max = 1200;
+  const sc = Math.min(1, max/Math.max(cropImg.width, cropImg.height));
+  const c = document.createElement('canvas');
+  c.width = Math.round(cropImg.width*sc); c.height = Math.round(cropImg.height*sc);
+  const g = c.getContext('2d');
+  try { g.filter = cropFilter(); } catch(e){}
+  g.drawImage(cropImg, 0, 0, c.width, c.height);
+  if(res) res(c.toDataURL('image/jpeg', 0.72));
 });
 $('cropCancel').addEventListener('click', ()=>{
+  $('cropImg').style.filter = '';
   $('cropModal').hidden = true;
   const res = cropDone; cropDone = null;
   if(res) res(null);
@@ -1926,6 +2017,38 @@ $('salesList').addEventListener('click', e=>{
   if(sale) openSaleForm(sale);
 });
 
+/* ── 작품 종류 ── */
+const BASE_CATS = ['팔찌','반지','목걸이','기타'];
+let catFilter = '';
+function allCats(){
+  const out = BASE_CATS.slice();
+  works.forEach(w=>{ const c=(w.data.cat||'').trim(); if(c && out.indexOf(c)<0) out.push(c); });
+  return out;
+}
+function renderWorkCats(){
+  const cur2 = (S.cat||'').trim();
+  $('workCats').innerHTML = allCats()
+    .map(c=>'<button class="chip'+(cur2===c?' on':'')+'" data-wc="'+esc(c)+'">'+esc(c)+'</button>').join('') +
+    '<button class="chip" data-wc-new>+ 직접</button>';
+}
+$('workCats').addEventListener('click', e=>{
+  if(e.target.closest('[data-wc-new]')){
+    const v = prompt('종류 이름을 적어주세요 (예: 키링)');
+    if(v && v.trim()){ S.cat = v.trim(); renderWorkCats(); queueSave(); }
+    return;
+  }
+  const b = e.target.closest('[data-wc]'); if(!b) return;
+  S.cat = (S.cat === b.dataset.wc) ? '' : b.dataset.wc;
+  renderWorkCats(); queueSave();
+});
+function catChips(sel){
+  const used = allCats().filter(c=>works.some(w=>(w.data.cat||'')===c));
+  if(!used.length) return '';
+  return '<button class="chip'+(sel===''?' on':'')+'" data-cf="">전체</button>' +
+    used.map(c=>'<button class="chip'+(sel===c?' on':'')+'" data-cf="'+esc(c)+'">'+esc(c)+'</button>').join('');
+}
+const byCat = list => catFilter ? list.filter(w=>(w.data.cat||'')===catFilter) : list;
+
 /* ── 작품 기록 목록 ── */
 function openRecord(){ curId = null; renderRecord(); renderHome(); show('record'); mark('record'); }
 function renderRecord(){
@@ -1935,7 +2058,8 @@ function renderRecord(){
     box.innerHTML = '<div class="hint" style="margin:0 0 4px">아직 기록한 작품이 없어요. 아래에서 시작하세요.</div>';
     return;
   }
-  box.innerHTML = sortedWorks().map(w=>{
+  $('recCats').innerHTML = catChips(catFilter);
+  box.innerHTML = byCat(sortedWorks()).map(w=>{
     const shots = (w.data.photos)||[];
     const t = shots[0];
     const name = (w.data.title||'').trim() || '이름 없는 작품';
@@ -1948,7 +2072,7 @@ function renderRecord(){
       (t ? '<img src="'+t+'" alt="">' : '<svg width="18" height="18" viewBox="0 0 24 24" fill="none"><rect x="2.5" y="5.5" width="19" height="14" rx="3" stroke="#6E668A" stroke-width="1.6"/><circle cx="12" cy="12.5" r="3.6" stroke="#6E668A" stroke-width="1.6"/></svg>') +
       (shots.length>1 ? '<b>'+shots.length+'</b>' : '') +
       '</span><span><span class="name">'+esc(name)+'</span><br>' +
-      '<span class="meta">'+esc(info)+'</span></span></button>' +
+      '<span class="meta">'+((w.data.cat||'').trim() ? esc(w.data.cat)+' · ' : '')+esc(info)+'</span></span></button>' +
       '<button class="x" data-x>×</button></div>';
   }).join('');
 }
@@ -2608,6 +2732,7 @@ $('cntPlus').addEventListener('click', ()=>setCount(n(S.count)+1));
 /* ── 공유: 미리보기 후 내보내기 ── */
 let shareTab = 'card';
 let cardEditText = '';
+let sharePhotoIdx = 0;
 let shareCanvas = null;
 const FONT = "'Apple SD Gothic Neo','Noto Sans KR','Malgun Gothic',system-ui,sans-serif";
 
@@ -2725,7 +2850,8 @@ function drawCard(mat, inc, done){
   };
 
   const box = [ (SZ-ph)/2, m, ph, ph ];
-  if(S.photos[0]){
+  const shot = S.photos[Math.min(sharePhotoIdx, S.photos.length-1)];
+  if(shot){
     const img = new Image();
     img.onload = () => {
       g.save(); roundRect(g, box[0], box[1], ph, ph, SZ*0.05); g.clip();
@@ -2735,7 +2861,7 @@ function drawCard(mat, inc, done){
       g.restore(); rest();
     };
     img.onerror = () => { g.fillStyle='#E7E1F0'; g.save(); roundRect(g,box[0],box[1],ph,ph,SZ*0.05); g.fill(); g.restore(); rest(); };
-    img.src = S.photos[0];
+    img.src = shot;
   }else{
     g.save(); roundRect(g, box[0], box[1], ph, ph, SZ*0.05); g.clip();
     g.fillStyle = '#E7E1F0'; g.fillRect(box[0],box[1],ph,ph);
@@ -2760,6 +2886,8 @@ function renderShare(){
   $('cardPrev').hidden = shareTab!=='card';
   $('textPrev').hidden = shareTab!=='text';
   $('cardEditWrap').hidden = shareTab!=='card';
+  $('sharePhotoWrap').hidden = shareTab!=='card';
+  if(shareTab==='card') renderSharePhotos();
   if(shareTab==='card'){
     if(!cardEditText){
       const base = [ rec ? ((S.title||'').trim()||'이름 없는 작품') : figures().name ]
@@ -2771,12 +2899,40 @@ function renderShare(){
   }
   else $('textPrev').value = buildText(mat, inc);
 }
-$('btnShare').addEventListener('click', ()=>{ cardEditText = ''; $('shareModal').hidden = false; renderShare(); });
+$('btnShare').addEventListener('click', ()=>{ cardEditText = ''; sharePhotoIdx = 0; $('shareModal').hidden = false; renderShare(); });
 $('closeShare').addEventListener('click', ()=>{ $('shareModal').hidden = true; });
 $('shareModal').addEventListener('click', e=>{ if(e.target.id==='shareModal') $('shareModal').hidden = true; });
 $('tabCard').addEventListener('click', ()=>{ shareTab='card'; renderShare(); });
 $('tabText').addEventListener('click', ()=>{ shareTab='text'; renderShare(); });
 $('incCost').addEventListener('change', renderShare);
+function renderSharePhotos(){
+  if(sharePhotoIdx >= S.photos.length) sharePhotoIdx = 0;
+  $('sharePhotos').innerHTML = S.photos.length
+    ? S.photos.map((p,i)=>
+        '<div class="shot" data-sp="'+i+'" style="width:70px;height:70px;border-color:'+(i===sharePhotoIdx?'var(--violet)':'var(--line)')+';border-width:'+(i===sharePhotoIdx?'2px':'1px')+'">' +
+          '<img src="'+p+'" alt="">' +
+          (i===sharePhotoIdx ? '<span class="tag rep">쓸 사진</span>' : '') +
+        '</div>').join('')
+    : '<div class="hint" style="margin:0">아직 사진이 없어요. 아래에서 넣어보세요.</div>';
+}
+$('sharePhotos').addEventListener('click', e=>{
+  const b = e.target.closest('[data-sp]'); if(!b) return;
+  sharePhotoIdx = +b.dataset.sp;
+  renderSharePhotos(); renderShare();
+});
+async function addSharePhoto(files){
+  const list = Array.from(files||[]);
+  if(!list.length) return;
+  const added = await pickPhotos(list.slice(0,1));
+  if(!added.length) return;
+  S.photos.push(added[0]);
+  sharePhotoIdx = S.photos.length - 1;
+  renderPhotos(); queueSave();
+  renderSharePhotos(); renderShare();
+  flash('작품 사진에도 저장했어요');
+}
+$('shareCam').addEventListener('change', e=>{ addSharePhoto(e.target.files); e.target.value=''; });
+$('shareLib').addEventListener('change', e=>{ addSharePhoto(e.target.files); e.target.value=''; });
 $('incMat').addEventListener('change', ()=>{ cardEditText=''; renderShare(); });
 let cardEditTimer;
 $('cardEdit').addEventListener('input', e=>{
@@ -2886,6 +3042,7 @@ $('fileImport').addEventListener('change', e=>{
   if(saved && saved.sales) sales = saved.sales;
   if(saved && saved.events) events = saved.events;
   if(saved && saved.money) money = saved.money;
+  if(saved && saved.catFilter) catFilter = saved.catFilter;
   if(saved && saved.calRange) calRange = saved.calRange;
   if(saved && saved.libSort) libSort = saved.libSort;
   if(saved && saved.saleSort) saleSort = saved.saleSort;
